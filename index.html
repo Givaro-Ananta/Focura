@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focura — Ruang Fokus | Media Interaktif Bimbingan & Konseling SMA</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Library SheetJS untuk Integrasi Spreadsheet Excel (.xlsx) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- ======================================================================
+       1. HALAMAN LOGIN & PENDAFTARAN LANDSCAPE (SPLIT-SCREEN HORIZONTAL)
+       ====================================================================== -->
+  <section id="auth-view" class="auth-wrapper">
+    <div class="auth-landscape-card">
+      <!-- Sisi Kiri: Identitas Focura, Ilustrasi, Kutipan & Jaminan Privasi -->
+      <div class="auth-brand-panel">
+        <div>
+          <div class="auth-logo-row">
+            <img src="assets/svg/logo-focura.svg" alt="Logo Focura" />
+            <div>
+              <h1 style="font-size:1.5rem;line-height:1.2;">Focura</h1>
+              <span style="font-size:0.85rem;opacity:0.9;">Ruang Fokus • Layanan BK Bidang Belajar</span>
+            </div>
+          </div>
+
+          <div class="auth-quote-box">
+            <p style="font-size:1.05rem;font-weight:600;margin-bottom:4px;">
+              "Fokus hari ini, untuk hasil yang lebih baik esok nanti."
+            </p>
+            <p style="font-size:0.84rem;opacity:0.9;">
+              Media digital edukatif, preventif, dan non-diagnostik untuk membantu peserta didik SMA mengembangkan konsentrasi belajar.
+            </p>
+          </div>
+        </div>
+
+        <div class="auth-illustration-wrap">
+          <img src="assets/svg/student-focus.svg" alt="Ilustrasi Siswa Belajar Fokus" />
+        </div>
+
+        <div class="privacy-badge-list">
+          <span class="privacy-pill">🔒 Privasi Akun 100% Terisolasi</span>
+          <span class="privacy-pill">🛡️ UU PDP No. 27 Tahun 2022</span>
+          <span class="privacy-pill">📋 Non-Diagnostik</span>
+        </div>
+      </div>
+
+      <!-- Sisi Kanan: Formulir Autentikasi Modular -->
+      <div class="auth-form-panel">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" data-tab="student-login">Login Siswa</button>
+          <button type="button" class="auth-tab-btn" data-tab="student-register">Daftar Akun Siswa</button>
+          <button type="button" class="auth-tab-btn" data-tab="admin-login">Admin Guru BK</button>
+        </div>
+
+        <div id="auth-alert" class="hidden"></div>
+
+        <!-- Tab 1: Login Siswa -->
+        <form id="form-student-login">
+          <h2 style="font-size:1.35rem;margin-bottom:4px;">Masuk ke Ruang Fokus</h2>
+          <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:18px;">
+            Siswa wajib membuat akun terlebih dahulu agar ruang refleksi dan progresmu terlindungi 100%.
+          </p>
+          <div class="form-group">
+            <label for="login-student-id">Email atau Nomor Induk Siswa (NIS)</label>
+            <input type="text" id="login-student-id" class="form-control" placeholder="Contoh: 24110801 atau siswa@sma.sch.id" required />
+          </div>
+          <div class="form-group">
+            <label for="login-student-pass">Kata Sandi</label>
+            <input type="password" id="login-student-pass" class="form-control" placeholder="Masukkan kata sandi akunmu" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Masuk ke Ruang Belajar</button>
+        </form>
+
+        <!-- Tab 2: Registrasi Akun Baru Siswa -->
+        <form id="form-student-register" class="hidden">
+          <h2 style="font-size:1.35rem;margin-bottom:4px;">Buat Akun Pribadi Siswa</h2>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:14px;">
+            Setiap akun terisolasi secara mandiri sesuai prinsip kerahasiaan Bimbingan & Konseling.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-group">
+              <label for="reg-name">Nama Lengkap</label>
+              <input type="text" id="reg-name" class="form-control" placeholder="Nama siswa" required />
+            </div>
+            <div class="form-group">
+              <label for="reg-nis">NIS</label>
+              <input type="text" id="reg-nis" class="form-control" placeholder="Nomor Induk" required />
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:10px;">
+            <div class="form-group">
+              <label for="reg-kelas">Kelas</label>
+              <input type="text" id="reg-kelas" class="form-control" placeholder="Contoh: XI IPA 2" required />
+            </div>
+            <div class="form-group">
+              <label for="reg-email">Email Siswa</label>
+              <input type="email" id="reg-email" class="form-control" placeholder="nama@email.com" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="reg-pass">Buat Kata Sandi (Min. 6 Karakter)</label>
+            <input type="password" id="reg-pass" class="form-control" placeholder="Minimal 6 karakter" required />
+          </div>
+          <label class="consent-box">
+            <input type="checkbox" id="reg-consent" required style="margin-top:3px;" />
+            <span>
+              <strong>Informed Consent:</strong> Saya memahami bahwa Focura adalah media pendukung BK non-diagnostik dan data pribadi saya dilindungi sesuai UU No. 27 Tahun 2022.
+            </span>
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Daftar & Buat Akun Sekarang</button>
+        </form>
+
+        <!-- Tab 3: Login Khusus Admin Guru BK -->
+        <form id="form-admin-login" class="hidden">
+          <h2 style="font-size:1.35rem;margin-bottom:4px;color:var(--secondary);">Ruang Khusus Guru BK / Admin</h2>
+          <p style="font-size:0.86rem;color:var(--text-muted);margin-bottom:18px;">
+            Akses terpisah khusus pengelola layanan Bimbingan dan Konseling.
+          </p>
+          <div class="form-group">
+            <label for="login-admin-email">Email Resmi Guru BK</label>
+            <input type="email" id="login-admin-email" class="form-control" placeholder="Masukkan email admin Guru BK" required />
+          </div>
+          <div class="form-group">
+            <label for="login-admin-pass">Kata Sandi Admin</label>
+            <input type="password" id="login-admin-pass" class="form-control" placeholder="Masukkan kata sandi khusus" required />
+          </div>
+          <button type="submit" class="btn btn-secondary btn-block">Masuk ke Dashboard Guru BK</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       2. RUANG DASHBOARD PESERTA DIDIK (TERISOLASI PER AKUN)
+       ====================================================================== -->
+  <div id="student-app-view" class="app-shell hidden">
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-header">
+          <img src="assets/svg/logo-focura.svg" alt="Focura" />
+          <div>
+            <strong>Focura</strong>
+            <div style="font-size:0.78rem;color:var(--text-muted);">Ruang Fokus Siswa</div>
+          </div>
+        </div>
+        <ul id="student-nav" class="nav-list">
+          <li><button class="nav-item active" data-section="beranda">🏠 Beranda & Alur</button></li>
+          <li><button class="nav-item" data-section="materi">📚 Materi (Google Drive)</button></li>
+          <li><button class="nav-item" data-section="hambatan">🔍 Kenali Hambatan</button></li>
+          <li><button class="nav-item" data-section="tugas">✅ Atur Tugas & Target</button></li>
+          <li><button class="nav-item" data-section="fokus">⏱️ Mulai Fokus (Timer)</button></li>
+          <li><button class="nav-item" data-section="refleksi">📝 Refleksi Belajar</button></li>
+          <li><button class="nav-item" data-section="progres">📊 Jejak Progres & Excel</button></li>
+          <li><button class="nav-item" data-section="konsultasi">💬 Konsultasi Guru BK</button></li>
+          <li><button class="nav-item" data-section="rpl">📄 Dokumen RPL Klasikal</button></li>
+        </ul>
+      </div>
+
+      <button id="btn-student-logout" class="btn btn-outline btn-block">Keluar Akun</button>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div>
+          <h2 id="student-greeting">Halo, Siswa!</h2>
+          <p id="student-meta" style="font-size:0.86rem;color:var(--text-muted);"></p>
+        </div>
+        <span id="rpl-progress-badge" class="badge" style="background:var(--primary-light);color:var(--primary-dark);padding:8px 14px;">
+          Ketercapaian Aktivitas RPL: 0/4
+        </span>
+      </header>
+
+      <!-- Panel Beranda -->
+      <section id="sec-beranda" class="student-panel">
+        <div class="card" style="background:linear-gradient(120deg,#eff6ff,#f0fdfa);margin-bottom:20px;">
+          <h3 style="margin-bottom:6px;">Alur Layanan Bimbingan Klasikal Focura</h3>
+          <p style="font-size:0.92rem;color:var(--text-muted);">
+            1. Baca <strong>Materi</strong> &rarr; 2. Isi <strong>Kenali Hambatan</strong> &rarr; 3. Susun <strong>Atur Tugas</strong> &rarr; 4. Latihan di <strong>Mulai Fokus</strong> &rarr; 5. Tulis <strong>Refleksi Belajar</strong>.
+          </p>
+        </div>
+        <div class="card-grid">
+          <div class="card">
+            <h4>📚 Materi & Tips Fokus</h4>
+            <p style="font-size:0.88rem;color:var(--text-muted);margin:8px 0;">Akses 3 modul pembelajaran konsentrasi belajar langsung dari Google Drive.</p>
+          </div>
+          <div class="card">
+            <h4>⏱️ Latihan Perhatian Terjadwal</h4>
+            <p style="font-size:0.88rem;color:var(--text-muted);margin:8px 0;">Timer fokus interaktif 10 menit, 25 menit, atau 50 menit.</p>
+          </div>
+          <div class="card">
+            <h4>💬 Konsultasi Sukarela Guru BK</h4>
+            <p style="font-size:0.88rem;color:var(--text-muted);margin:8px 0;">Terhubung langsung dengan formulir pendampingan resmi Guru BK.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel Materi Google Drive -->
+      <section id="sec-materi" class="student-panel hidden">
+        <h3 style="margin-bottom:6px;">Modul & Materi Konsentrasi Belajar (Google Drive)</h3>
+        <p style="color:var(--text-muted);margin-bottom:18px;">Klik Pratinjau Modul untuk membaca langsung di dalam aplikasi atau buka di Google Drive.</p>
+        <div id="drive-modules-grid" class="card-grid"></div>
+      </section>
+
+      <!-- Panel Kenali Hambatan -->
+      <section id="sec-hambatan" class="student-panel hidden">
+        <div class="card">
+          <h3 style="margin-bottom:6px;">Kenali Hambatan Belajar (Non-Diagnostik)</h3>
+          <p style="color:var(--text-muted);margin-bottom:16px;">Pilih situasi yang paling sering mengganggu fokus belajarmu saat ini.</p>
+          <div id="barriers-checklist"></div>
+          <button id="btn-save-barriers" class="btn btn-primary">Simpan Hasil Identifikasi</button>
+        </div>
+      </section>
+
+      <!-- Panel Atur Tugas -->
+      <section id="sec-tugas" class="student-panel hidden">
+        <div class="card">
+          <h3 style="margin-bottom:12px;">Atur Tugas & Target Belajar Harian</h3>
+          <form id="form-add-task" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+            <input type="text" id="task-title-input" class="form-control" style="flex:2;min-width:220px;" placeholder="Contoh: Mengerjakan latihan soal Matematika Bab 2" required />
+            <select id="task-priority-input" class="form-control" style="flex:1;min-width:140px;">
+              <option value="Tinggi">Prioritas Tinggi</option>
+              <option value="Sedang" selected>Prioritas Sedang</option>
+              <option value="Rendah">Prioritas Rendah</option>
+            </select>
+            <button type="submit" class="btn btn-primary">+ Tambah Target</button>
+          </form>
+          <div id="student-task-list"></div>
+        </div>
+      </section>
+
+      <!-- Panel Mulai Fokus -->
+      <section id="sec-fokus" class="student-panel hidden">
+        <div class="card" style="text-align:center;max-width:560px;margin:0 auto;">
+          <h3>Mulai Latihan Fokus Terjadwal</h3>
+          <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px;">Jauhkan notifikasi HP selama timer berjalan.</p>
+          <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px;">
+            <button type="button" class="btn btn-outline duration-btn" data-mins="10">10 Menit</button>
+            <button type="button" class="btn btn-outline duration-btn" data-mins="25">25 Menit</button>
+            <button type="button" class="btn btn-outline duration-btn" data-mins="50">50 Menit</button>
+          </div>
+          <input type="text" id="focus-topic-input" class="form-control" placeholder="Topik yang sedang dipelajari..." style="margin-bottom:10px;" />
+          <div id="timer-display" class="timer-circle">10:00</div>
+          <div style="display:flex;justify-content:center;gap:12px;">
+            <button type="button" id="btn-start-timer" class="btn btn-primary">▶ Mulai Sesi Fokus</button>
+            <button type="button" id="btn-reset-timer" class="btn btn-outline">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel Refleksi Belajar -->
+      <section id="sec-refleksi" class="student-panel hidden">
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin-bottom:12px;">Refleksi Pengalaman Belajar</h3>
+          <form id="form-reflection">
+            <div class="form-group">
+              <label for="ref-learned">1. Apa yang kamu pelajari hari ini?</label>
+              <textarea id="ref-learned" class="form-control" rows="2" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="ref-feeling">2. Bagaimana perasaan dan tingkat fokusmu saat belajar?</label>
+              <textarea id="ref-feeling" class="form-control" rows="2" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="ref-improvement">3. Strategi apa yang ingin kamu perbaiki pada sesi berikutnya?</label>
+              <textarea id="ref-improvement" class="form-control" rows="2" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Simpan Refleksi Pribadi</button>
+          </form>
+        </div>
+        <div id="student-reflection-history"></div>
+      </section>
+
+      <!-- Panel Jejak Progres & Integrasi Spreadsheet Excel -->
+      <section id="sec-progres" class="student-panel hidden">
+        <div class="card-grid">
+          <div class="card"><h2 id="stat-tasks-done">0</h2><p>Tugas Selesai</p></div>
+          <div class="card"><h2 id="stat-focus-count">0</h2><p>Sesi Latihan Fokus</p></div>
+          <div class="card"><h2 id="stat-reflection-count">0</h2><p>Catatan Refleksi</p></div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin-bottom:14px;">Grafik Aktivitas Belajar Mingguan (Menit Fokus)</h3>
+          <div id="weekly-bar-chart" style="display:flex;gap:12px;align-items:flex-end;"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:6px;">Sinkronisasi Spreadsheet Excel (.xlsx)</h3>
+          <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:14px;">
+            Unduh seluruh data tugas, sesi fokus, dan refleksi pribadimu ke file Excel (.xlsx) atau unggah file Excel untuk memperbarui data.
+          </p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+            <button id="btn-export-student-xlsx" class="btn btn-secondary">📥 Ekspor Data ke Excel (.xlsx)</button>
+            <label class="btn btn-outline" style="cursor:pointer;">
+              📤 Impor dari Excel (.xlsx)
+              <input type="file" id="input-import-student-xlsx" accept=".xlsx,.xls" class="hidden" />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel Konsultasi Guru BK (Google Form) -->
+      <section id="sec-konsultasi" class="student-panel hidden">
+        <div class="card">
+          <h3 style="margin-bottom:8px;">Konsultasi Sukarela dengan Guru BK</h3>
+          <p style="color:var(--text-muted);margin-bottom:16px;">
+            Membutuhkan pendampingan lebih lanjut terkait hambatan konsentrasi belajar? Sampaikan keluhan atau jadwalkan sesi konseling melalui formulir resmi Guru BK berikut:
+          </p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+            <a href="https://forms.gle/SNFh7o8WdDHCGU8XA" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+              Buka Formulir Konsultasi Guru BK (Google Form) ↗
+            </a>
+          </div>
+          <div style="background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:16px;font-size:0.88rem;">
+            <strong>Catatan Kerahasiaan:</strong> Layanan konsultasi bersifat sukarela dan seluruh informasi yang Anda sampaikan dijaga kerahasiaannya oleh Guru BK sesuai kode etik profesi BK.
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel Dokumen RPL -->
+      <section id="sec-rpl" class="student-panel hidden">
+        <div id="student-rpl-container"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ======================================================================
+       3. RUANG KHUSUS ADMIN GURU BK (mltihrnnda@gmail.com)
+       ====================================================================== -->
+  <div id="admin-app-view" class="app-shell hidden">
+    <aside class="sidebar admin-theme">
+      <div>
+        <div class="sidebar-header">
+          <img src="assets/svg/logo-focura.svg" alt="Focura Admin" />
+          <div>
+            <strong>Focura Admin</strong>
+            <div style="font-size:0.78rem;color:var(--secondary);">Panel Khusus Guru BK</div>
+          </div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-muted);padding:0 10px;">
+          Ruang ini terisolasi dari tampilan siswa untuk memantau ketercapaian layanan klasikal dan mengelola rekap Excel.
+        </p>
+      </div>
+      <button id="btn-admin-logout" class="btn btn-danger btn-block">Keluar Ruang Admin</button>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div>
+          <h2>Dashboard Pengelola Layanan BK</h2>
+          <p id="admin-name-label" style="color:var(--secondary);font-weight:600;"></p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="https://forms.gle/SNFh7o8WdDHCGU8XA" target="_blank" rel="noopener noreferrer" class="btn btn-outline">
+            Formulir Konsultasi BK ↗
+          </a>
+          <button id="btn-export-admin-xlsx" class="btn btn-secondary">
+            📥 Ekspor Rekap Layanan (.xlsx)
+          </button>
+        </div>
+      </header>
+
+      <div class="card-grid">
+        <div class="card"><h2 id="admin-total-students">0</h2><p>Peserta Didik Terdaftar</p></div>
+        <div class="card"><h2 id="admin-total-focus">0</h2><p>Total Sesi Latihan Fokus</p></div>
+        <div class="card"><h2 id="admin-total-reflections">0</h2><p>Total Refleksi Terisi</p></div>
+      </div>
+
+      <div class="card" style="margin-bottom:24px;">
+        <h3 style="margin-bottom:12px;">Pemantauan Ketercapaian Indikator Layanan (RPL)</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>NIS</th>
+                <th>Nama Siswa</th>
+                <th>Kelas</th>
+                <th>Sesi Fokus</th>
+                <th>Refleksi</th>
+                <th>Status Ketercapaian</th>
+              </tr>
+            </thead>
+            <tbody id="admin-students-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:12px;">Rencana Pelaksanaan Layanan (RPL) Bimbingan Klasikal</h3>
+      <div id="admin-rpl-container"></div>
+    </main>
+  </div>
+
+  <!-- Modal Pratinjau Modul Google Drive -->
+  <div id="drive-preview-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <strong id="modal-drive-title">Pratinjau Modul</strong>
+        <button id="btn-close-modal" class="btn btn-outline" style="padding:6px 12px;">Tutup ✕</button>
+      </div>
+      <div class="modal-body" style="padding:0;">
+        <iframe id="modal-drive-iframe" style="width:100%;height:72vh;border:none;" title="Pratinjau Dokumen Google Drive"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
