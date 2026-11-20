@@ -5,131 +5,111 @@
  */
 
 import { APP_CONFIG } from "./config.js";
-import { registerStudent, loginUser, getActiveSession, logoutUser, getRegisteredStudents } from "./auth.js";
-import {
-  getStudentData,
-  addStudentTask,
-  toggleStudentTask,
-  recordFocusSession,
-  saveStudentReflection,
-  saveStudentBarriers
-} from "./storage.js";
-import { exportStudentWorkbook, importStudentWorkbook, exportAdminRecapWorkbook } from "./excel-sync.js";
+import { api, getActiveSession, loginUser, logoutUser } from "./auth.js";
+import { getStudentData, loadStudentData, updateStudentData } from "./storage.js";
+import { exportStudentWorkbook, importStudentWorkbook } from "./excel-sync.js";
+import { escapeHtml, setupMonitor } from "./monitor.js";
+import { pagePath, WORKSPACES } from "./workspaces.js";
 
 let timerInterval = null;
 let remainingSeconds = 600;
 let selectedDurationMinutes = 10;
 
-document.addEventListener("DOMContentLoaded", () => {
-  initAuthListeners();
-  renderCurrentRoute();
-});
-
-function renderCurrentRoute() {
-  const user = getActiveSession();
+export async function initializeApp() {
+  const button = document.getElementById("btn-google-login");
+  const { demo: demoFlag, workspace, section } = document.getElementById("focura").dataset;
+  const demo = demoFlag === "true";
   const authView = document.getElementById("auth-view");
-  const studentView = document.getElementById("student-app-view");
-  const adminView = document.getElementById("admin-app-view");
-
-  authView.classList.add("hidden");
-  studentView.classList.add("hidden");
-  adminView.classList.add("hidden");
-
-  if (!user) {
+  const loading = document.getElementById("workspace-loading");
+  function showLogin() {
+    loading?.remove();
+    document.getElementById("admin-app-view")?.classList.add("hidden");
     authView.classList.remove("hidden");
-    return;
+    authView.classList.add("is-visible");
+    button.disabled = false;
   }
+  if (demo) {
+    button.textContent = "Masuk sebagai Admin Demo";
+    document.getElementById("auth-help").textContent = "Mode demo menggunakan data contoh.";
+  }
+  button.onclick = async () => {
+    button.disabled = true;
+    try {
+      const destination = workspace ? pagePath(workspace, section) + window.location.search : demo ? "/admin" : "/";
+      await loginUser(demo ? "demo" : "google", destination);
+    } catch {
+      showAuthAlert("Login gagal dimulai. Silakan coba lagi.");
+      showLogin();
+    }
+  };
 
-  if (user.role === "admin_bk") {
-    adminView.classList.remove("hidden");
-    renderAdminDashboard(user);
-  } else {
-    studentView.classList.remove("hidden");
-    renderStudentDashboard(user);
+  try {
+    const user = await getActiveSession();
+    if (!user) {
+      showLogin();
+      const error = new URLSearchParams(window.location.search).get("error");
+      if (error) showAuthAlert({
+        AccessDenied: "Email ini belum diizinkan. Hubungi Admin Central.",
+        AccessIncomplete: "Peran atau penugasan akun belum lengkap. Hubungi Admin Central.",
+        SessionExpired: "Sesi telah berakhir. Masuk kembali untuk melanjutkan.",
+        ServiceUnavailable: "Daftar akses sementara tidak dapat diperiksa. Silakan coba lagi.",
+      }[error] || "Login tidak dapat diselesaikan. Silakan coba lagi.");
+      return;
+    }
+    const userWorkspace = Object.keys(WORKSPACES).find((name) => WORKSPACES[name].role === user.role);
+    if (workspace !== userWorkspace) {
+      window.location.replace(userWorkspace ? pagePath(userWorkspace) : "/");
+      return;
+    }
+    if (user.role === "student") {
+      user.kelas = await loadStudentData();
+      renderStudentDashboard(user);
+      document.getElementById("student-app-view").classList.remove("hidden");
+    } else if (user.role === "guardian") {
+      const children = await api("guardian/children");
+      const container = document.getElementById("guardian-children");
+      container.innerHTML = children.length ? children.map((child) =>
+        '<article class="card"><h3>' + escapeHtml(child.fullName) + '</h3><p>' +
+        escapeHtml(child.school) + ' · ' + escapeHtml(child.kelas) + '</p></article>'
+      ).join("") : '<p>Belum ada akun anak yang ditautkan.</p>';
+      document.getElementById("btn-guardian-logout").onclick = leave;
+      document.getElementById("guardian-app-view").classList.remove("hidden");
+    } else {
+      document.getElementById("btn-admin-logout").onclick = leave;
+      authView.classList.add("hidden");
+      loading?.remove();
+      document.getElementById("admin-app-view").classList.remove("hidden");
+      await setupMonitor(user, workspace, section, renderRPLSection);
+    }
+    authView.classList.add("hidden");
+  } catch (error) {
+    showLogin();
+    showAuthAlert(error.message);
   }
 }
 
-/* ==========================================================================
-   AUTENTIKASI LANDSCAPE (LOGIN SISWA, DAFTAR AKUN SISWA, & LOGIN ADMIN BK)
-   ========================================================================== */
-function initAuthListeners() {
-  const tabBtns = document.querySelectorAll(".auth-tab-btn");
-  tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      tabBtns.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      const target = btn.dataset.tab;
-      document.getElementById("form-student-login").classList.toggle("hidden", target !== "student-login");
-      document.getElementById("form-student-register").classList.toggle("hidden", target !== "student-register");
-      document.getElementById("form-admin-login").classList.toggle("hidden", target !== "admin-login");
-      showAuthAlert("", false);
-    });
-  });
-
-  // Form Pendaftaran Akun Siswa (Wajib sebelum masuk)
-  document.getElementById("form-student-register").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const res = registerStudent({
-      fullName: document.getElementById("reg-name").value,
-      nis: document.getElementById("reg-nis").value,
-      kelas: document.getElementById("reg-kelas").value,
-      email: document.getElementById("reg-email").value,
-      password: document.getElementById("reg-pass").value,
-      consent: document.getElementById("reg-consent").checked
-    });
-
-    showAuthAlert(res.message, res.ok);
-    if (res.ok) {
-      e.target.reset();
-      document.querySelector('[data-tab="student-login"]').click();
-      showAuthAlert(res.message, true);
-    }
-  });
-
-  // Form Login Siswa
-  document.getElementById("form-student-login").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const idVal = document.getElementById("login-student-id").value;
-    const passVal = document.getElementById("login-student-pass").value;
-    const res = loginUser(idVal, passVal, "student");
-    if (!res.ok) {
-      showAuthAlert(res.message, false);
-    } else {
-      e.target.reset();
-      renderCurrentRoute();
-    }
-  });
-
-  // Form Login Khusus Admin Guru BK (mltihrnnda@gmail.com / ninda226)
-  document.getElementById("form-admin-login").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const emailVal = document.getElementById("login-admin-email").value;
-    const passVal = document.getElementById("login-admin-pass").value;
-    const res = loginUser(emailVal, passVal, "admin");
-    if (!res.ok) {
-      showAuthAlert(res.message, false);
-    } else {
-      e.target.reset();
-      renderCurrentRoute();
-    }
-  });
+function leave() {
+  clearInterval(timerInterval);
+  logoutUser().catch((error) => alert(error.message));
 }
 
-function showAuthAlert(message, isSuccess) {
-  const alertBox = document.getElementById("auth-alert");
-  if (!message) {
-    alertBox.classList.add("hidden");
-    return;
+function showAuthAlert(message) {
+  const box = document.getElementById("auth-alert");
+  box.classList.remove("hidden");
+  box.style.cssText = "background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:0.86rem;";
+  box.textContent = message;
+}
+
+async function saveLearning(action, values) {
+  try {
+    await updateStudentData(action, values);
+    refreshStudentPanels();
+    return true;
+  } catch (error) {
+    refreshStudentPanels();
+    alert(error.message);
+    return false;
   }
-  alertBox.classList.remove("hidden");
-  alertBox.style.background = isSuccess ? "#dcfce7" : "#fee2e2";
-  alertBox.style.color = isSuccess ? "#166534" : "#991b1b";
-  alertBox.style.padding = "10px 14px";
-  alertBox.style.borderRadius = "10px";
-  alertBox.style.marginBottom = "14px";
-  alertBox.style.fontSize = "0.86rem";
-  alertBox.textContent = message;
 }
 
 /* ==========================================================================
@@ -137,7 +117,7 @@ function showAuthAlert(message, isSuccess) {
    ========================================================================== */
 function renderStudentDashboard(user) {
   document.getElementById("student-greeting").textContent = `Halo, ${user.fullName}!`;
-  document.getElementById("student-meta").textContent = `NIS: ${user.nis} • Kelas ${user.kelas} • Ruang Pribadi Terenkripsi`;
+  document.getElementById("student-meta").textContent = `NIS: ${user.nis || "—"} • ${user.kelas}`;
 
   // Navigasi Menu Siswa
   const navButtons = document.querySelectorAll("#student-nav .nav-item");
@@ -145,45 +125,44 @@ function renderStudentDashboard(user) {
     btn.onclick = () => {
       navButtons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      switchStudentSection(btn.dataset.section, user);
+      switchStudentSection(btn.dataset.section);
     };
   });
 
-  document.getElementById("btn-student-logout").onclick = () => {
-    clearInterval(timerInterval);
-    logoutUser();
-    renderCurrentRoute();
-  };
-
-  // Excel Sync Buttons
+  document.getElementById("btn-student-logout").onclick = leave;
   document.getElementById("btn-export-student-xlsx").onclick = () => exportStudentWorkbook(user);
-  document.getElementById("input-import-student-xlsx").onchange = (e) => {
-    const file = e.target.files[0];
-    importStudentWorkbook(user, file, (ok, msg) => {
-      alert(msg);
-      if (ok) refreshStudentPanels(user);
-    });
+  document.getElementById("input-import-student-xlsx").onchange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const tasks = await importStudentWorkbook(file);
+      if (await saveLearning("importTasks", { tasks })) alert("Data tugas dari Excel berhasil diimpor.");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      event.target.value = "";
+    }
   };
 
   renderDriveModules();
   renderRPLSection("student-rpl-container");
-  setupFocusTimer(user);
-  setupTaskManager(user);
-  setupBarriersChecklist(user);
-  setupReflectionForm(user);
-  refreshStudentPanels(user);
-  switchStudentSection("beranda", user);
+  setupFocusTimer();
+  setupTaskManager();
+  setupBarriersChecklist();
+  setupReflectionForm();
+  refreshStudentPanels();
+  switchStudentSection("beranda");
 }
 
-function switchStudentSection(sectionId, user) {
+function switchStudentSection(sectionId) {
   document.querySelectorAll(".student-panel").forEach((panel) => {
     panel.classList.toggle("hidden", panel.id !== `sec-${sectionId}`);
   });
-  refreshStudentPanels(user);
+  refreshStudentPanels();
 }
 
-function refreshStudentPanels(user) {
-  const data = getStudentData(user.id);
+function refreshStudentPanels() {
+  const data = getStudentData();
   const completedTasks = data.tasks.filter((t) => t.completed).length;
 
   // Update Statistik Jejak Progres
@@ -207,19 +186,19 @@ function refreshStudentPanels(user) {
           (t) => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:${t.completed ? "#f8fafc" : "#fff"};">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:${t.completed ? "line-through" : "none"};">
-          <input type="checkbox" data-task-id="${t.id}" ${t.completed ? "checked" : ""}/>
-          <span>${t.title}</span>
+          <input type="checkbox" data-task-id="${escapeHtml(t.id)}" ${t.completed ? "checked" : ""}/>
+          <span>${escapeHtml(t.title)}</span>
         </label>
-        <span class="badge ${t.priority === "Tinggi" ? "badge-high" : t.priority === "Sedang" ? "badge-mid" : "badge-low"}">${t.priority}</span>
+        <span class="badge ${t.priority === "Tinggi" ? "badge-high" : t.priority === "Sedang" ? "badge-mid" : "badge-low"}">${escapeHtml(t.priority)}</span>
       </div>`
         )
         .join("")
     : `<p style="color:var(--text-muted);font-size:0.9rem;">Belum ada target belajar. Tambahkan tugas pertamamu di atas.</p>`;
 
   taskListEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-    cb.onchange = () => {
-      toggleStudentTask(user.id, cb.dataset.taskId);
-      refreshStudentPanels(user);
+    cb.onchange = async () => {
+      cb.disabled = true;
+      await saveLearning("toggleTask", { id: cb.dataset.taskId });
     };
   });
 
@@ -230,10 +209,10 @@ function refreshStudentPanels(user) {
         .map(
           (r) => `
       <div class="card" style="margin-bottom:12px;padding:16px;">
-        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">${r.date}</div>
-        <p><strong>Dipelajari:</strong> ${r.learned}</p>
-        <p><strong>Perasaan:</strong> ${r.feeling}</p>
-        <p><strong>Rencana Perbaikan:</strong> ${r.improvement}</p>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">${escapeHtml(r.date)}</div>
+        <p><strong>Dipelajari:</strong> ${escapeHtml(r.learned)}</p>
+        <p><strong>Perasaan:</strong> ${escapeHtml(r.feeling)}</p>
+        <p><strong>Rencana Perbaikan:</strong> ${escapeHtml(r.improvement)}</p>
       </div>`
         )
         .join("")
@@ -259,19 +238,17 @@ function refreshStudentPanels(user) {
     .join("");
 }
 
-function setupTaskManager(user) {
-  document.getElementById("form-add-task").onsubmit = (e) => {
+function setupTaskManager() {
+  document.getElementById("form-add-task").onsubmit = async (e) => {
     e.preventDefault();
     const title = document.getElementById("task-title-input").value.trim();
     const priority = document.getElementById("task-priority-input").value;
     if (!title) return;
-    addStudentTask(user.id, title, priority);
-    e.target.reset();
-    refreshStudentPanels(user);
+    if (await saveLearning("addTask", { title, priority })) e.target.reset();
   };
 }
 
-function setupFocusTimer(user) {
+function setupFocusTimer() {
   const display = document.getElementById("timer-display");
   const updateDisplay = () => {
     const m = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
@@ -290,18 +267,19 @@ function setupFocusTimer(user) {
 
   document.getElementById("btn-start-timer").onclick = () => {
     clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
+    timerInterval = setInterval(async () => {
       if (remainingSeconds > 0) {
         remainingSeconds--;
         updateDisplay();
       } else {
         clearInterval(timerInterval);
         const topic = document.getElementById("focus-topic-input").value.trim();
-        recordFocusSession(user.id, selectedDurationMinutes, topic);
-        alert(`Selamat! Sesi latihan fokus ${selectedDurationMinutes} menit selesai dan dicatat ke Jejak Progres.`);
-        remainingSeconds = selectedDurationMinutes * 60;
+        const durationMinutes = selectedDurationMinutes;
+        remainingSeconds = durationMinutes * 60;
         updateDisplay();
-        refreshStudentPanels(user);
+        if (await saveLearning("recordFocus", { durationMinutes, topic })) {
+          alert(`Selamat! Sesi latihan fokus ${durationMinutes} menit selesai dan dicatat ke Jejak Progres.`);
+        }
       }
     }, 1000);
   };
@@ -313,9 +291,9 @@ function setupFocusTimer(user) {
   };
 }
 
-function setupBarriersChecklist(user) {
+function setupBarriersChecklist() {
   const container = document.getElementById("barriers-checklist");
-  const data = getStudentData(user.id);
+  const data = getStudentData();
 
   container.innerHTML = APP_CONFIG.barriersList
     .map(
@@ -330,25 +308,25 @@ function setupBarriersChecklist(user) {
     )
     .join("");
 
-  document.getElementById("btn-save-barriers").onclick = () => {
+  document.getElementById("btn-save-barriers").onclick = async () => {
     const checked = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((el) => el.value);
-    saveStudentBarriers(user.id, checked);
-    alert("Hasil identifikasi hambatan belajar berhasil disimpan secara non-diagnostik.");
-    refreshStudentPanels(user);
+    if (await saveLearning("saveBarriers", { barrierIds: checked })) {
+      alert("Hasil identifikasi hambatan belajar berhasil disimpan secara non-diagnostik.");
+    }
   };
 }
 
-function setupReflectionForm(user) {
-  document.getElementById("form-reflection").onsubmit = (e) => {
+function setupReflectionForm() {
+  document.getElementById("form-reflection").onsubmit = async (e) => {
     e.preventDefault();
     const learned = document.getElementById("ref-learned").value.trim();
     const feeling = document.getElementById("ref-feeling").value.trim();
     const improvement = document.getElementById("ref-improvement").value.trim();
     if (!learned || !feeling || !improvement) return;
-    saveStudentReflection(user.id, learned, feeling, improvement);
-    e.target.reset();
-    alert("Refleksi belajar tersimpan di ruang pribadimu!");
-    refreshStudentPanels(user);
+    if (await saveLearning("saveReflection", { learned, feeling, improvement })) {
+      e.target.reset();
+      alert("Refleksi belajar tersimpan di ruang pribadimu!");
+    }
   };
 }
 
@@ -414,55 +392,4 @@ function renderRPLSection(containerId) {
         </table>
       </div>
     </div>`;
-}
-
-/* ==========================================================================
-   DASHBOARD KHUSUS ADMIN GURU BK (mltihrnnda@gmail.com)
-   ========================================================================== */
-function renderAdminDashboard(adminUser) {
-  document.getElementById("admin-name-label").textContent = adminUser.fullName;
-  renderRPLSection("admin-rpl-container");
-
-  document.getElementById("btn-admin-logout").onclick = () => {
-    logoutUser();
-    renderCurrentRoute();
-  };
-
-  document.getElementById("btn-export-admin-xlsx").onclick = () => exportAdminRecapWorkbook();
-
-  const students = getRegisteredStudents();
-  document.getElementById("admin-total-students").textContent = students.length;
-
-  let totalReflections = 0;
-  let totalFocus = 0;
-  const tbody = document.getElementById("admin-students-tbody");
-
-  tbody.innerHTML = students.length
-    ? students
-        .map((st, i) => {
-          const pData = getStudentData(st.id);
-          totalReflections += pData.reflections.length;
-          totalFocus += pData.focusSessions.length;
-          const activeSteps =
-            (pData.selectedBarriers.length > 0 ? 1 : 0) +
-            (pData.tasks.length > 0 ? 1 : 0) +
-            (pData.focusSessions.length > 0 ? 1 : 0) +
-            (pData.reflections.length > 0 ? 1 : 0);
-
-          return `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${st.nis}</td>
-          <td><strong>${st.fullName}</strong></td>
-          <td>${st.kelas}</td>
-          <td>${pData.focusSessions.length} sesi</td>
-          <td>${pData.reflections.length} catatan</td>
-          <td><span class="badge ${activeSteps >= 3 ? "badge-low" : "badge-mid"}">${activeSteps}/4 Indikator RPL</span></td>
-        </tr>`;
-        })
-        .join("")
-    : `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Belum ada peserta didik yang membuat akun pada perangkat ini.</td></tr>`;
-
-  document.getElementById("admin-total-reflections").textContent = totalReflections;
-  document.getElementById("admin-total-focus").textContent = totalFocus;
 }

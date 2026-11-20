@@ -1,18 +1,12 @@
 /**
  * Modul Konfigurasi & Data Statis Focura (Ruang Fokus)
- * Berisi tautan Google Form Konsultasi, Modul Google Drive, Kredensial Admin BK,
+ * Berisi tautan Google Form Konsultasi, Modul Google Drive,
  * dan Dokumen Rencana Pelaksanaan Layanan (RPL) Bimbingan Klasikal.
  */
 
 export const APP_CONFIG = {
   appName: "Focura — Ruang Fokus",
   subtitle: "Media Bimbingan & Konseling Konsentrasi Belajar Siswa SMA",
-  adminAccount: {
-    email: "mltihrnnda@gmail.com",
-    passwordHash: "ninda226", // Sesuai spesifikasi akses khusus Guru BK
-    name: "Melati Herninda (Guru BK)",
-    role: "admin_bk"
-  },
   consultationFormUrl: "https://forms.gle/SNFh7o8WdDHCGU8XA",
   driveModules: [
     {
@@ -62,7 +56,7 @@ export const APP_CONFIG = {
     rasional: "Peserta didik jenjang SMA menghadapi tuntutan akademik yang beragam dan perlu mengelola perhatian secara mandiri baik di kelas maupun di rumah. Website interaktif FOCURA (Ruang Fokus) dirancang sebagai suplemen layanan tatap muka yang edukatif, preventif, non-diagnostik, serta menjunjung tinggi perlindungan data pribadi dan privasi siswa sesuai UU No. 27 Tahun 2022.",
     tujuanUmum: "Peserta didik mampu mengenali faktor pemicu gangguan konsentrasi belajar, menerapkan strategi pengelolaan perhatian serta regulasi diri secara mandiri, dan menyusun target serta refleksi belajar yang terarah melalui website interaktif FOCURA.",
     langkahPelaksanaan: [
-      { tahap: "1. Pendahuluan (10 Menit)", rincian: "Guru BK menyapa peserta didik, membangun suasana kondusif, menyampaikan tujuan layanan, menjelaskan prinsip privasi data & persetujuan sadar (informed consent), serta mengarahkan siswa membuat akun pribadi pada FOCURA." },
+      { tahap: "1. Pendahuluan (10 Menit)", rincian: "Guru BK menyapa peserta didik, membangun suasana kondusif, menyampaikan tujuan layanan, menjelaskan prinsip privasi data & persetujuan sadar (informed consent), serta mengarahkan siswa masuk dengan akun Google yang terdaftar di Focura." },
       { tahap: "2. Kegiatan Inti — Eksplorasi & Identifikasi (15 Menit)", rincian: "Peserta didik membaca ringkasan pada halaman Beranda & menu Materi (terhubung Google Drive), lalu mengisi fitur Kenali Hambatan secara non-diagnostik." },
       { tahap: "3. Kegiatan Inti — Latihan Fokus & Target (20 Menit)", rincian: "Guru BK memandu penyusunan prioritas pada fitur Atur Tugas, dilanjutkan simulasi sesi belajar terfokus menggunakan timer Mulai Fokus." },
       { tahap: "4. Kegiatan Inti — Diskusi Kelompok (10 Menit)", rincian: "Diskusi kelompok kecil mengenai studi kasus gangguan konsentrasi belajar siswa SMA dan perumusan strategi regulasi diri." },

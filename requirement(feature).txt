@@ -1,0 +1,115 @@
+untuk sementara fitur yang kalian mau itu aku tulis kaya gini
+
+REQUIREMENT FITUR FOCURA — RUANG FOKUS
+Login Google, daftar email yang diizinkan, dan pengelolaan lintas sekolah
+
+1. Kondisi aplikasi saat ini
+
+Focura adalah aplikasi web statis. index.html dan css/style.css menyediakan
+halaman login, ruang siswa, dan dashboard gabungan Guru BK/Admin. README.md
+menjelaskan struktur proyek. assets/svg/logo-focura.svg dan student-focus.svg
+masing-masing menyediakan logo dan ilustrasi belajar untuk antarmuka.
+
+js/auth.js menyimpan pendaftaran siswa di localStorage dan sesi di
+sessionStorage. js/config.js menetapkan satu akun Guru BK/Admin dengan
+kredensial yang tertanam di JavaScript. js/app.js memilih dashboard dan
+menampilkan rekap siswa yang terdaftar di browser tersebut. js/storage.js
+menyimpan catatan belajar per ID siswa di browser, dan js/excel-sync.js
+menangani impor serta ekspor Excel. Modul Google Drive, konsultasi melalui
+Google Form, dan dokumen RPL sudah menjadi bagian dari layanan siswa.
+
+2. Login dan hak akses
+
+Semua peran login melalui Google. Master Admin menambahkan alamat email yang
+diizinkan secara manual ke spreadsheet akun privat. Setelah Google memverifikasi
+identitas pengguna, server mencocokkan emailnya dengan daftar tersebut dan
+menerapkan peran serta izin akses di Focura.
+
+- Admin Central (Master Admin). Akun dengan peran Admin masuk ke dashboard
+  pusat untuk seluruh sekolah. Admin Central dapat melihat data akun dan
+  aktivitas login Guru BK serta siswa, mengelola akses login, dan mengeluarkan
+  siswa dari kelasnya.
+- Guru BK. Setiap guru memiliki akun sendiri. Satu sekolah dapat memiliki
+  lebih dari satu Guru BK. Setelah masuk, guru dapat membaca daftar siswa di
+  sekolah tempatnya ditugaskan, status sesi siswa, dan waktu login terakhir.
+  Rekap belajar yang diizinkan tetap terbatas pada siswa di sekolahnya. Guru
+  BK dilarang mengakses daftar guru, sekolah lain, dan pengelolaan akun.
+- Siswa. Masuk dengan akun Google yang emailnya tercantum di spreadsheet.
+  NIS digunakan sebagai data identitas siswa di sekolah. Siswa mengakses
+  ruang belajar dan data miliknya sendiri.
+- Orang tua/wali. Masuk dengan akun sendiri dan hanya dapat membaca informasi
+  anak yang ditautkan ke akunnya oleh Admin Central, seperti nama, kelas,
+  dan sekolah. Isi refleksi dan konsultasi siswa bersifat pribadi.
+
+3. Dashboard Admin Central
+
+- Dashboard pusat menampilkan ringkasan seluruh sekolah dan rincian per
+  sekolah. Contoh sekolah untuk pengujian adalah SMA 1 Bandar Lampung dan
+  SMA 1 Talang Padang. Admin Central dapat menambah dan mengubah data sekolah.
+- Untuk setiap sekolah, dashboard menampilkan jumlah akun Guru BK dan siswa
+  yang terdaftar serta jumlah akun dari masing-masing peran yang sedang login.
+  Daftar Guru BK dan daftar siswa menampilkan nama, sekolah, status sesi, dan
+  waktu login terakhir, jika tersedia. Daftar siswa juga menampilkan kelas
+  atau status Belum Memiliki Kelas.
+- Akun dihitung sedang login ketika memiliki setidaknya satu sesi yang masih
+  berlaku di server. Satu akun dihitung sekali meskipun masuk dari beberapa
+  perangkat. Setelah sesi terakhir berakhir, akun keluar dari hitungan aktif.
+  Sesi yang masih berlaku dapat tetap terhitung setelah tab ditutup hingga
+  sesi berakhir atau kedaluwarsa.
+
+4. Pengelolaan akun dan keanggotaan kelas
+
+- Admin Central dapat menambah dan mengubah akun, menetapkan peran, menetapkan
+  sekolah bagi Guru BK dan siswa, menautkan orang tua/wali dengan siswa, serta
+  mengaktifkan atau menonaktifkan izin login. Pada tahap enrollment, Master
+  Admin cukup memasukkan email ke spreadsheet. Pengaturan peran, sekolah,
+  kelas, dan tautan wali dilakukan sesuai kebutuhan akun di Focura.
+- Dari daftar siswa di suatu kelas, Admin Central dapat memilih Keluarkan
+  dari Kelas. Siswa hilang dari daftar kelas itu dan tampil dengan status
+  Belum Memiliki Kelas di daftar siswa sekolah. Admin Central dapat menetapkan
+  kelas baru untuk siswa tersebut.
+- Mengeluarkan siswa dari kelas hanya menghapus keanggotaan kelas. Akun,
+  keanggotaan sekolah, izin login, dan catatan belajarnya tetap tersedia.
+  Admin Central dapat menonaktifkan izin login secara terpisah. Penonaktifan
+  mengakhiri sesi aktif dan mencegah login hingga akun diaktifkan kembali.
+
+5. Kebutuhan implementasi
+
+- Akun, peran, sekolah, keanggotaan kelas, relasi orang tua/wali, dan status
+  sesi dikelola di server agar perubahan berlaku lintas perangkat. Server
+  memeriksa sesi, peran, dan cakupan sekolah pada setiap permintaan data,
+  termasuk ekspor rekap jika tersedia untuk peran tersebut. Pada permintaan
+  dari orang tua/wali, server juga memeriksa hubungan akun dengan siswa
+  yang datanya diminta.
+- Google menangani autentikasi, dan server Focura memeriksa email yang
+  diizinkan serta mengelola sesi aplikasi. Kredensial Guru BK/Admin yang
+  tertanam pada JavaScript perlu dihapus dari implementasi baru. Jika data
+  lama akan dipindahkan, data bersumber dari browser asal dan perlu dipetakan
+  ke akun serta sekolah yang tepat. Riwayat login lintas perangkat dimulai
+  setelah sesi dikelola oleh server.
+- Batas akses Admin Central dan Guru BK mencakup data akun, aktivitas login,
+  dan ringkasan belajar yang diizinkan. Isi refleksi pribadi dan jawaban
+  konsultasi siswa dikecualikan dari dashboard pemantauan.
+- Detail alur enrollment dan login dibahas pada tahap implementasi
+  autentikasi pengguna.
+
+6. Kriteria penerimaan
+
+1. Di satu sekolah, dua Guru BK dapat masuk dengan akun masing-masing. Siswa,
+   Admin Central, dan orang tua/wali juga bisa masuk ke ruang sesuai perannya.
+2. Guru BK di SMA 1 Bandar Lampung dapat melihat siapa saja siswa sekolahnya
+   yang sedang login. Permintaan untuk data guru atau data SMA 1 Talang Padang ditolak oleh server.
+3. Admin Central dapat melihat daftar dan jumlah Guru BK serta siswa yang
+   sedang login di kedua sekolah dari satu dashboard. Seorang siswa yang
+   masuk dari dua perangkat terhitung satu kali.
+4. Admin Central dapat menambahkan akun, mengubah peran atau sekolah, dan
+   mengatur izin login. Server menerapkan perubahan saat akses berikutnya.
+5. Setelah Admin Central mengeluarkan siswa dari kelas, siswa hilang dari
+   daftar kelas tersebut dan muncul di daftar sekolah dengan status Belum
+   Memiliki Kelas. Siswa tetap dapat masuk jika akun aktif dan masih dapat
+   membuka catatan belajarnya. Admin Central dapat menetapkan kelas baru.
+6. Orang tua/wali dapat membaca informasi anak yang tertaut ke akunnya.
+   Server menolak permintaan untuk data siswa yang tidak tertaut.
+7. Server menolak login Focura jika email Google pengguna belum tercatat di
+   spreadsheet. Email yang sudah ditambahkan Master Admin dapat dipakai untuk
+   masuk melalui Google jika izin akses akun aktif.

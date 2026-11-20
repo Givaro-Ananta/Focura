@@ -4,8 +4,7 @@
  * - Menggunakan library SheetJS (XLSX) yang dimuat di index.html.
  */
 
-import { getRegisteredStudents } from "./auth.js";
-import { getStudentData, saveStudentData } from "./storage.js";
+import { getStudentData } from "./storage.js";
 
 export function exportStudentWorkbook(user) {
   if (typeof window.XLSX === "undefined") {
@@ -13,7 +12,7 @@ export function exportStudentWorkbook(user) {
     return;
   }
 
-  const data = getStudentData(user.id);
+  const data = getStudentData();
   const wb = window.XLSX.utils.book_new();
 
   // Sheet 1: Profil & Ringkasan Progres
@@ -72,68 +71,37 @@ export function exportStudentWorkbook(user) {
   window.XLSX.writeFile(wb, `Focura_Data_${user.nis}_${user.fullName.replace(/\s+/g, "_")}.xlsx`);
 }
 
-export function importStudentWorkbook(user, file, onComplete) {
-  if (!file || typeof window.XLSX === "undefined") return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const workbook = window.XLSX.read(e.target.result, { type: "array" });
-      const currentData = getStudentData(user.id);
-
-      if (workbook.Sheets["Atur_Tugas"]) {
-        const importedTasks = window.XLSX.utils.sheet_to_json(workbook.Sheets["Atur_Tugas"]);
-        importedTasks.forEach((row) => {
-          if (row.Tugas && row.Tugas !== "Belum ada tugas") {
-            currentData.tasks.push({
-              id: "TSK-IMP-" + Math.random().toString(36).slice(2, 8),
-              title: String(row.Tugas),
-              priority: row.Prioritas || "Sedang",
-              completed: String(row.Status).toLowerCase() === "selesai",
-              createdAt: row.Tanggal || new Date().toLocaleDateString("id-ID")
-            });
-          }
-        });
-      }
-
-      saveStudentData(user.id, currentData);
-      if (onComplete) onComplete(true, "Data dari file Excel (.xlsx) berhasil disinkronkan ke akun Anda!");
-    } catch (err) {
-      if (onComplete) onComplete(false, "Gagal membaca struktur file Excel: " + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(file);
+export async function importStudentWorkbook(file) {
+  if (!window.XLSX) throw new Error("Library Spreadsheet Excel belum termuat.");
+  const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array" });
+  const table = workbook.Sheets.Atur_Tugas;
+  if (!table) throw new Error("Workbook harus berisi sheet Atur_Tugas.");
+  return window.XLSX.utils.sheet_to_json(table)
+    .filter((row) => row.Tugas && row.Tugas !== "Belum ada tugas")
+    .map((row) => ({
+      title: String(row.Tugas),
+      priority: ["Tinggi", "Sedang", "Rendah"].includes(row.Prioritas) ? row.Prioritas : "Sedang",
+      completed: String(row.Status).toLowerCase() === "selesai",
+      sourceDate: String(row.Tanggal || ""),
+    }));
 }
 
-export function exportAdminRecapWorkbook() {
-  if (typeof window.XLSX === "undefined") return;
-
-  const students = getRegisteredStudents();
+export function exportAdminRecapWorkbook(students) {
+  if (!window.XLSX) throw new Error("Library Spreadsheet Excel belum termuat.");
   const wb = window.XLSX.utils.book_new();
-
-  const recapRows = students.map((st, index) => {
-    const pData = getStudentData(st.id);
-    const doneTasks = pData.tasks.filter((t) => t.completed).length;
-    const totalTasks = pData.tasks.length;
-    const activeCount =
-      (pData.selectedBarriers.length > 0 ? 1 : 0) +
-      (totalTasks > 0 ? 1 : 0) +
-      (pData.focusSessions.length > 0 ? 1 : 0) +
-      (pData.reflections.length > 0 ? 1 : 0);
-
-    return {
-      No: index + 1,
-      NIS: st.nis,
-      Nama_Peserta_Didik: st.fullName,
-      Kelas: st.kelas,
-      Email: st.email,
-      Tugas_Selesai: `${doneTasks}/${totalTasks}`,
-      Jumlah_Sesi_Fokus: pData.focusSessions.length,
-      Jumlah_Refleksi: pData.reflections.length,
-      Indikator_RPL_Terpenuhi: `${activeCount}/4 Aktivitas`,
-      Status_Ketercapaian: activeCount >= 3 ? "Tercapai (Minimal 3/4)" : "Perlu Pendampingan"
-    };
-  });
+  const recapRows = students.map((student, index) => ({
+    No: index + 1,
+    NIS: student.nis,
+    Nama_Peserta_Didik: student.fullName,
+    Sekolah: student.school,
+    Kelas: student.kelas,
+    Email: student.email,
+    Tugas_Selesai: `${student.doneTasks}/${student.tasks}`,
+    Jumlah_Sesi_Fokus: student.focusCount,
+    Jumlah_Refleksi: student.reflectionCount,
+    Indikator_RPL_Terpenuhi: `${student.rplCount}/4 Aktivitas`,
+    Status_Ketercapaian: student.rplCount >= 3 ? "Tercapai (Minimal 3/4)" : "Perlu Pendampingan",
+  }));
 
   const ws = window.XLSX.utils.json_to_sheet(
     recapRows.length

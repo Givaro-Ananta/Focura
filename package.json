@@ -1,0 +1,21 @@
+{
+  "name": "focura-ruang-fokus",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "demo": "node scripts/demo.js",
+    "build": "next build",
+    "start": "next start",
+    "setup:sheets": "node --env-file-if-exists=.env.local scripts/setup-sheets.js",
+    "test": "node --test --test-isolation=none"
+  },
+  "dependencies": {
+    "google-auth-library": "10.9.1",
+    "next": "15.5.27",
+    "next-auth": "4.24.15",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}
