@@ -336,6 +336,44 @@ test("BK summary uses separate survey and barrier sources and includes no indivi
   assert.doesNotMatch(JSON.stringify(summary), /Isi pribadi|a-1|siswa-a/i);
 });
 
+test("Admin Central can use Guru BK features within the selected school", async () => {
+  const { admin, teacher, student, service, actor } = fixture();
+  const [central, bk, pupil] = await Promise.all([actor(admin), actor(teacher), actor(student)]);
+  await assert.rejects(service.bkStudents(central), { status: 403 });
+  await assert.rejects(service.bkSummary(central, "unknown"), { status: 404 });
+  await assert.rejects(service.bkStudents(bk, "b"), { status: 403 });
+  await assert.rejects(service.modules(bk, "b"), { status: 403 });
+  await assert.rejects(service.bkSummary(pupil, "a"), { status: 403 });
+  assert.deepEqual((await service.bkStudents(central, "b")).students.map(({ id }) => id), ["siswa-b"]);
+
+  await service.saveModule(central, {
+    title: "Materi pilihan sekolah B", description: "Materi konsentrasi belajar.",
+    editUrl: "https://drive.google.com/file/d/module_B123456789/view",
+  }, undefined, false, "b");
+  assert((await service.modules(central, "b")).some(({ title }) => title === "Materi pilihan sekolah B"));
+  assert(!(await service.modules(bk)).some(({ title }) => title === "Materi pilihan sekolah B"));
+});
+
+test("Admin student preview keeps test activity separate from private student data", async () => {
+  const { admin, student, service, actor } = fixture();
+  const [central, pupil] = await Promise.all([actor(admin), actor(student)]);
+  await service.updateLearning(pupil, { action: "saveReflection", learned: "Catatan asli", feeling: "Baik", improvement: "Latihan" });
+  await assert.rejects(service.learning(central), { status: 403 });
+  await assert.rejects(service.learning(pupil, true), { status: 403 });
+  assert.throws(() => service.updateLearning(pupil, { action: "startFocus" }, true), { status: 403 });
+  assert.equal((await service.learning(central, true)).data.reflections.length, 0);
+  await service.updateLearning(central, {
+    action: "saveReflection", learned: "Catatan uji", feeling: "Baik", improvement: "Latihan",
+  }, true);
+  await service.updateLearning(central, { action: "startFocus", requestId: randomUUID(), durationMinutes: 10 }, true);
+  const { data } = await service.learning(central, true);
+  assert.equal(data.reflections[0].learned, "Catatan uji");
+  assert.equal(data.timer.durationMinutes, 10);
+  const { data: privateData } = await service.learning(pupil);
+  assert.equal(privateData.reflections[0].learned, "Catatan asli");
+  assert.equal(privateData.timer, null);
+});
+
 test("Focus timer survives reads and retries, validates elapsed time and groups real completions in Jakarta", async () => {
   const { service, actor, student, stranger, teacher, advance, tables } = fixture();
   const [own, other, bk] = await Promise.all([student, stranger, teacher].map(actor));

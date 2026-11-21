@@ -242,6 +242,28 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     requireValue(roles.includes(access.actor.role), "Akses ditolak.", 403);
   }
 
+  function bkSchoolId(access, requestedSchoolId) {
+    allow(access, "bk", "admin");
+    if (access.actor.role === "bk") {
+      requireValue(!requestedSchoolId || requestedSchoolId === access.actor.schoolId,
+        "Sekolah berada di luar penugasan Guru BK.", 403);
+      return access.actor.schoolId;
+    }
+    requireValue(requestedSchoolId, "Pilih sekolah untuk membuka ruang Guru BK.", 403);
+    return requestedSchoolId;
+  }
+
+  async function verifyAdminSchool(access, schoolId) {
+    if (access.actor.role !== "admin") return;
+    const { Sekolah } = await store.read("Sekolah");
+    requireValue(Sekolah.some(({ id }) => id === schoolId), "Sekolah tidak ditemukan.", 404);
+  }
+
+  function learningOwner(access, preview) {
+    allow(access, preview ? "admin" : "student");
+    return preview ? `admin-preview:${access.actor.id}` : access.actor.id;
+  }
+
   function revoke(sessions, accountId) {
     const time = now();
     return sessions.filter((session) => session.accountId === accountId && liveSession(session, time))
@@ -304,9 +326,12 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     context,
     dashboard,
 
-    async bkSummary(access) {
-      allow(access, "bk");
-      const { schoolId } = access.actor;
+    async bkStudents(access, requestedSchoolId) {
+      return dashboard(access, bkSchoolId(access, requestedSchoolId), "siswa");
+    },
+
+    async bkSummary(access, requestedSchoolId) {
+      const schoolId = bkSchoolId(access, requestedSchoolId);
       const { Sekolah, Belajar, Angket } = await store.read("Sekolah", "Belajar", "Angket");
       const school = Sekolah.find(({ id }) => id === schoolId);
       requireValue(school, "Sekolah tidak ditemukan.", 404);
@@ -332,11 +357,11 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       return { school: school.name, totals, barriers, barrierRespondents, survey, surveyRespondents: responses.length };
     },
 
-    importSurvey(access, { rows, preview = false }) {
-      allow(access, "bk");
+    importSurvey(access, { rows, preview = false }, requestedSchoolId) {
+      const schoolId = bkSchoolId(access, requestedSchoolId);
       return serialize(async () => {
+        await verifyAdminSchool(access, schoolId);
         requireValue(typeof preview === "boolean", "Pilihan pratinjau tidak valid.");
-        const { schoolId } = access.actor;
         const { Angket } = await store.read("Angket");
         const seen = new Set(Angket.filter((entry) => entry.schoolId === schoolId).map(({ code }) => code));
         const { records, report } = importRows(rows, seen, (row) => {
@@ -356,16 +381,22 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       });
     },
 
-    async modules(access) {
-      allow(access, "bk", "student");
+    async modules(access, requestedSchoolId) {
+      const schoolId = access.actor.role === "student" ? access.actor.schoolId : bkSchoolId(access, requestedSchoolId);
+      await verifyAdminSchool(access, schoolId);
       const { Modul } = await store.read("Modul");
-      return schoolModules(Modul, access.actor.schoolId);
+      return schoolModules(Modul, schoolId);
     },
 
-    saveModule(access, input, moduleId, deleted = false) {
-      allow(access, "bk");
+    previewModules(access) {
+      allow(access, "admin");
+      return schoolModules([], null);
+    },
+
+    saveModule(access, input, moduleId, deleted = false, requestedSchoolId) {
+      const schoolId = bkSchoolId(access, requestedSchoolId);
       return serialize(async () => {
-        const { schoolId } = access.actor;
+        await verifyAdminSchool(access, schoolId);
         const { Modul } = await store.read("Modul");
         const existing = moduleId && schoolModules(Modul, schoolId).find((record) => record.id === moduleId);
         requireValue(!moduleId || existing, "Modul tidak ditemukan.", 404);
@@ -529,21 +560,22 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       }));
     },
 
-    async learning(access) {
-      allow(access, "student");
-      const { Kelas, Belajar } = await store.read("Kelas", "Belajar");
-      return { kelas: Kelas.find((entry) => entry.id === access.actor.classId && entry.schoolId === access.actor.schoolId)?.name || "Belum Memiliki Kelas",
-        data: learningData(Belajar.filter((entry) => entry.owner === access.actor.id), now()) };
+    async learning(access, preview = false) {
+      const owner = learningOwner(access, preview);
+      const { Kelas = [], Belajar } = await store.read("Belajar", ...(preview ? [] : ["Kelas"]));
+      const grade = Kelas.find((entry) => entry.id === access.actor.classId && entry.schoolId === access.actor.schoolId);
+      return { kelas: preview ? "Pratinjau Admin Central" : grade?.name || "Belum Memiliki Kelas",
+        data: learningData(Belajar.filter((entry) => entry.owner === owner), now()) };
     },
 
-    updateLearning(access, input) {
-      allow(access, "student");
+    updateLearning(access, input, preview = false) {
+      const owner = learningOwner(access, preview);
       return serialize(async () => {
         const { Belajar } = await store.read("Belajar");
-        const own = Belajar.filter((entry) => entry.owner === access.actor.id);
+        const own = Belajar.filter((entry) => entry.owner === owner);
         const time = now();
         const timestamp = new Date(time).toISOString();
-        const create = (kind, fields) => ({ id: fields.id || randomUUID(), owner: access.actor.id, kind, createdAt: timestamp, ...fields });
+        const create = (kind, fields) => ({ id: fields.id || randomUUID(), owner, kind, createdAt: timestamp, ...fields });
         const taskFields = ({ title, priority }) => {
           requireValue(PRIORITIES.includes(priority), "Prioritas tidak valid.");
           return { title: text(title, 300), priority };
@@ -588,7 +620,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
           case "resumeFocus":
           case "resetFocus":
           case "recordFocus":
-            changes = updateTimer(input, own, time, create, access.actor.id);
+            changes = updateTimer(input, own, time, create, owner);
             break;
           case "saveReflection":
             changes = [create("reflection", { learned: text(input.learned, 3000), feeling: text(input.feeling, 3000), improvement: text(input.improvement, 3000) })];

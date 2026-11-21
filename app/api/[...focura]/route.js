@@ -14,13 +14,16 @@ const routes = [
   ["PATCH", /^central\/accounts\/([^/]+)$/, "admin", (access, id, body) => focura.saveAccount(access, body, id)],
   ["PATCH", /^central\/students\/([^/]+)\/class$/, "admin", (access, id, body) => focura.setClass(access, id, body)],
   ["POST", /^central\/guardian-links$/, "admin", (access, _, body) => focura.setGuardianLink(access, body)],
-  ["GET", /^bk\/students$/, "bk", (access, _, __, query) => focura.dashboard(access, query.get("school"), "siswa")],
-  ["GET", /^bk\/summary$/, "bk", (access) => focura.bkSummary(access)],
-  ["POST", /^bk\/survey$/, "bk", (access, _, body) => focura.importSurvey(access, body)],
-  ["GET", /^bk\/modules$/, "bk", (access) => focura.modules(access)],
-  ["POST", /^bk\/modules$/, "bk", (access, _, body) => focura.saveModule(access, body)],
-  ["PATCH", /^bk\/modules\/([^/]+)$/, "bk", (access, id, body) => focura.saveModule(access, body, id)],
-  ["DELETE", /^bk\/modules\/([^/]+)$/, "bk", (access, id) => focura.saveModule(access, null, id, true)],
+  ["GET", /^central\/student-preview\/learning$/, "admin", (access) => focura.learning(access, true)],
+  ["POST", /^central\/student-preview\/learning$/, "admin", (access, _, body) => focura.updateLearning(access, body, true)],
+  ["GET", /^central\/student-preview\/modules$/, "admin", (access) => focura.previewModules(access)],
+  ["GET", /^bk\/students$/, ["bk", "admin"], (access, _, __, query) => focura.bkStudents(access, query.get("school"))],
+  ["GET", /^bk\/summary$/, ["bk", "admin"], (access, _, __, query) => focura.bkSummary(access, query.get("school"))],
+  ["POST", /^bk\/survey$/, ["bk", "admin"], (access, _, body, query) => focura.importSurvey(access, body, query.get("school"))],
+  ["GET", /^bk\/modules$/, ["bk", "admin"], (access, _, __, query) => focura.modules(access, query.get("school"))],
+  ["POST", /^bk\/modules$/, ["bk", "admin"], (access, _, body, query) => focura.saveModule(access, body, undefined, false, query.get("school"))],
+  ["PATCH", /^bk\/modules\/([^/]+)$/, ["bk", "admin"], (access, id, body, query) => focura.saveModule(access, body, id, false, query.get("school"))],
+  ["DELETE", /^bk\/modules\/([^/]+)$/, ["bk", "admin"], (access, id, _, query) => focura.saveModule(access, null, id, true, query.get("school"))],
   ["GET", /^guardian\/children$/, "guardian", (access) => focura.children(access)],
   ["GET", /^me\/learning$/, "student", (access) => focura.learning(access)],
   ["POST", /^me\/learning$/, "student", (access, _, body) => focura.updateLearning(access, body)],
@@ -39,7 +42,7 @@ async function handle(request, context) {
     const [method, pattern, role, action] = route;
     const token = process.env.NEXTAUTH_SECRET ? await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET }) : null;
     const access = await focura.context(token?.focuraSessionId);
-    if (access.actor.role !== role) return json({ error: "Akses ditolak." }, 403);
+    if (![].concat(role).includes(access.actor.role)) return json({ error: "Akses ditolak." }, 403);
     const url = new URL(request.url);
     let body;
     if (method !== "GET") {

@@ -1,5 +1,21 @@
 import { driveLinks } from "./learning-rules.js";
 
+export function setupMobileMenu(toggle) {
+  const menu = document.getElementById(toggle.getAttribute("aria-controls"));
+  toggle.onclick = () => {
+    toggle.ariaExpanded = String(toggle.ariaExpanded !== "true");
+  };
+  toggle.parentElement.onkeydown = (event) => {
+    if (event.key === "Escape" && toggle.ariaExpanded === "true" && toggle.offsetWidth) {
+      toggle.ariaExpanded = "false";
+      toggle.focus();
+    }
+  };
+  menu.onclick = (event) => {
+    if (event.target.closest("nav a") && toggle.offsetWidth) toggle.ariaExpanded = "false";
+  };
+}
+
 export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",

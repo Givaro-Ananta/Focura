@@ -56,14 +56,17 @@
   <!-- workspace:student -->
   <div id="student-app-view" class="app-shell hidden">
     <aside class="sidebar">
-      <div>
-        <div class="sidebar-header">
-          <img src="/assets/svg/logo-focura.svg" alt="" />
-          <div>
-            <strong>Focura</strong>
-            <span>Ruang Fokus Siswa</span>
-          </div>
+      <div class="sidebar-header">
+        <img src="/assets/svg/logo-focura.svg" alt="" />
+        <div>
+          <strong>Focura</strong>
+          <span>Ruang Fokus Siswa</span>
         </div>
+      </div>
+      <button id="student-menu-toggle" class="btn btn-outline" type="button" aria-label="Menu siswa" aria-expanded="false" aria-controls="student-menu">
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+      </button>
+      <div id="student-menu">
         <nav aria-label="Navigasi ruang siswa">
           <ul id="student-nav" class="nav-list">
             <li><button class="nav-item active" aria-current="page" data-section="beranda"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#home" /></svg>Beranda &amp; Alur</button></li>
@@ -77,9 +80,11 @@
             <li><button class="nav-item" data-section="rpl"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg>Dokumen RPL Klasikal</button></li>
           </ul>
         </nav>
+        <div class="student-account">
+          <a id="student-preview-exit" class="btn btn-primary btn-block" href="/admin" hidden>Kembali ke Admin Central</a>
+          <button id="btn-student-logout" class="btn btn-outline btn-block">Keluar Akun</button>
+        </div>
       </div>
-
-      <button id="btn-student-logout" class="btn btn-outline btn-block">Keluar Akun</button>
     </aside>
 
     <main class="main-area">
@@ -95,6 +100,10 @@
       </header>
 
       <!-- Panel Beranda -->
+      <button class="student-home-link" type="button" data-open-section="beranda">
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5-7 7 7 7M3 12h18" /></svg>
+        Kembali ke beranda
+      </button>
       <section id="sec-beranda" class="student-panel">
         <div class="student-intro">
           <div>
@@ -103,7 +112,7 @@
           </div>
           <p class="student-private-status"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#lock" /></svg> Ruang pribadi aktif</p>
         </div>
-        <div class="student-feature-grid" aria-label="Fitur belajar">
+        <div class="student-feature-grid dashboard-fill" aria-label="Fitur belajar">
           <button class="card student-feature" type="button" data-open-section="tugas"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#checklist" /></svg></span><strong>Atur Tugas</strong><span>Susun target dan tentukan prioritas harianmu.</span></button>
           <button class="card student-feature" type="button" data-open-section="fokus"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg></span><strong>Mulai Fokus</strong><span>Latih perhatian dengan timer untuk satu target belajar.</span></button>
           <button class="card student-feature" type="button" data-open-section="materi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book" /></svg></span><strong>Materi dan Modul Drive</strong><span>Baca panduan belajar yang tersedia di sekolahmu.</span></button>
@@ -117,12 +126,12 @@
       <section id="sec-materi" class="student-panel hidden">
         <h2 class="panel-title">Materi konsentrasi belajar</h2>
         <p class="panel-description">Baca modul di Focura melalui Pratinjau Modul atau buka di Google Drive.</p>
-        <div id="drive-modules-grid" class="card-grid"></div>
+        <div id="drive-modules-grid" class="card-grid dashboard-fill"></div>
       </section>
 
       <!-- Panel Kenali Hambatan -->
       <section id="sec-hambatan" class="student-panel hidden">
-        <div class="card">
+        <div class="card dashboard-fill">
           <h2 class="panel-title">Kenali hambatan belajar</h2>
           <p class="panel-description">Pilih situasi yang paling sering mengganggu fokusmu. Hasilnya bersifat non-diagnostik.</p>
           <div id="barriers-checklist"></div>
@@ -134,7 +143,7 @@
 
       <!-- Panel Atur Tugas -->
       <section id="sec-tugas" class="student-panel hidden">
-        <div class="card">
+        <div class="card dashboard-fill">
           <h2 class="panel-title">Atur tugas &amp; target harian</h2>
           <form id="form-add-task" class="task-form">
             <label>Target belajar <input type="text" id="task-title-input" class="form-control" placeholder="Contoh: Latihan soal Matematika Bab 2" maxlength="300" required /></label>
@@ -163,7 +172,7 @@
 
       <!-- Panel Mulai Fokus -->
       <section id="sec-fokus" class="student-panel hidden">
-        <div class="card focus-card">
+        <div class="card focus-card dashboard-fill">
           <h2 class="panel-title">Latihan fokus</h2>
           <p class="panel-description">Jauhkan notifikasi HP selama timer berjalan.</p>
           <div class="focus-options" role="group" aria-label="Durasi latihan fokus">
@@ -197,7 +206,7 @@
 
       <!-- Panel Refleksi Belajar -->
       <section id="sec-refleksi" class="student-panel hidden">
-        <div class="card" style="margin-bottom:20px;">
+        <div class="card dashboard-fill" style="margin-bottom:20px;">
           <h2 class="panel-title">Refleksi pengalaman belajar</h2>
           <form id="form-reflection">
             <div class="form-group">
@@ -223,7 +232,7 @@
         <h2 class="panel-title">Jejak progres belajar</h2>
         <dl class="workspace-stats">
           <div><dt>Tugas selesai</dt><dd id="stat-tasks-done">0</dd></div>
-          <div><dt>Sesi latihan fokus</dt><dd id="stat-focus-count">0</dd><span id="stat-focus-minutes"></span></div>
+          <div><dt>Sesi latihan fokus</dt><dd><span id="stat-focus-count">0</span><span id="stat-focus-minutes" class="workspace-meta"></span></dd></div>
           <div><dt>Catatan refleksi</dt><dd id="stat-reflection-count">0</dd></div>
         </dl>
 
@@ -233,7 +242,7 @@
           <ul id="weekly-bar-chart" class="weekly-chart"></ul>
         </div>
 
-        <div class="card">
+        <div class="card dashboard-fill">
           <h3 class="panel-title">Privasi akun dan spreadsheet</h3>
           <p id="student-account-info" class="panel-description"></p>
           <p class="panel-description">
@@ -255,7 +264,7 @@
 
       <!-- Panel Konsultasi Guru BK (Google Form) -->
       <section id="sec-konsultasi" class="student-panel hidden">
-        <div class="card">
+        <div class="card dashboard-fill">
           <h2 class="panel-title">Konsultasi sukarela dengan Guru BK</h2>
           <p class="panel-description">
             Membutuhkan pendampingan lebih lanjut terkait hambatan konsentrasi belajar? Sampaikan keluhan atau jadwalkan sesi konseling melalui formulir resmi Guru BK berikut:
@@ -274,9 +283,15 @@
 
       <!-- Panel Dokumen RPL -->
       <section id="sec-rpl" class="student-panel hidden">
-        <div id="student-rpl-container"></div>
+        <div id="student-rpl-container" class="dashboard-panel"></div>
       </section>
     </main>
+    <button id="focus-island" type="button" data-open-section="fokus" hidden>
+      <svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg>
+      <span id="focus-island-state"></span>
+      <strong id="focus-island-time"></strong>
+      <span class="visually-hidden">Buka timer fokus</span>
+    </button>
   </div>
 
   <!-- workspace:monitor -->
@@ -286,10 +301,15 @@
         <img src="/assets/svg/logo-focura.svg" alt="" width="36" height="36" />
         <div><strong>Focura</strong><span id="monitor-role"></span></div>
       </div>
-      <nav id="monitor-nav" class="workspace-nav" aria-label="Navigasi ruang kerja"></nav>
-      <div class="workspace-account">
-        <p id="admin-name-label"></p>
-        <button id="btn-admin-logout" type="button" class="workspace-logout">Keluar</button>
+      <button id="monitor-menu-toggle" class="btn btn-outline" type="button" aria-label="Menu ruang kerja" aria-expanded="false" aria-controls="monitor-menu">
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+      </button>
+      <div id="monitor-menu">
+        <nav id="monitor-nav" class="workspace-nav" aria-label="Navigasi ruang kerja"></nav>
+        <div class="workspace-account">
+          <p id="admin-name-label"></p>
+          <button id="btn-admin-logout" type="button" class="workspace-logout">Keluar</button>
+        </div>
       </div>
     </aside>
     <main class="workspace-main">
@@ -300,8 +320,13 @@
         </div>
         <div id="monitor-actions" class="workspace-actions"></div>
       </header>
+      <a id="monitor-home" href="/admin" hidden>
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5-7 7 7 7M3 12h18" /></svg>
+        Kembali ke beranda
+      </a>
+      <div id="monitor-context"></div>
       <p id="monitor-feedback" class="workspace-feedback" role="status"></p>
-      <div id="monitor-content"></div>
+      <div id="monitor-content" class="dashboard-panel"></div>
     </main>
   </div>
 
@@ -316,7 +341,7 @@
     </aside>
     <main class="main-area">
       <header class="topbar"><div><h1>Informasi anak</h1><p class="page-description">Lihat sekolah dan kelas anak yang terhubung dengan akunmu.</p></div></header>
-      <div id="guardian-children" class="card-grid"></div>
+      <div id="guardian-children" class="card-grid dashboard-fill"></div>
     </main>
   </div>
 

@@ -3,7 +3,7 @@ import { setupBkPage } from "./bk.js";
 import { exportAdminRecapWorkbook } from "./excel-sync.js";
 import { APP_CONFIG } from "./config.js";
 import { JAKARTA } from "./learning-rules.js";
-import { escapeHtml, showDialog } from "./ui.js";
+import { escapeHtml, setupMobileMenu, showDialog } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 const roles = { admin: "Admin Central", bk: "Guru BK", student: "Siswa", guardian: "Orang Tua/Wali" };
@@ -27,6 +27,7 @@ const pageDetails = {
   pemantauan: ["chart", "Pantau aktivitas belajar, angket kebutuhan awal, dan pemetaan hambatan siswa."],
   materi: ["book", "Kelola materi Google Drive yang tersedia di sekolah penugasan."],
   database: ["document", "Ekspor rekap dan impor hasil angket kebutuhan awal."],
+  "pratinjau-siswa": ["user", "Coba fitur di ruang siswa."],
 };
 
 function icon(name) {
@@ -38,9 +39,17 @@ function options(items, selected) {
 }
 
 function table(headers, rows, empty) {
-  if (!rows.length) return `<p class="workspace-empty">${escapeHtml(empty)}</p>`;
-  return `<div class="workspace-table" tabindex="0" role="region" aria-label="Tabel ${headers[0].toLowerCase()}"><table><thead><tr>${headers.map((header) => `<th scope="col">${header}</th>`).join("")}
-    </tr></thead><tbody>${rows.map((cells) => `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  if (!rows.length) return `<p class="workspace-empty dashboard-fill">${escapeHtml(empty)}</p>`;
+  const columns = headers.map(escapeHtml);
+  return `<div class="workspace-table dashboard-fill" tabindex="0" role="region" aria-label="Tabel ${columns[0].toLowerCase()}">
+    <table role="table"><thead role="rowgroup"><tr role="row">
+      ${columns.map((column) => `<th scope="col" role="columnheader">${column}</th>`).join("")}
+    </tr></thead><tbody role="rowgroup">
+      ${rows.map((cells) => `<tr role="row">${cells.map((cell, index) => `<td role="cell">
+        ${index ? `<span class="workspace-cell-label" aria-hidden="true">${columns[index]}</span>` : ""}
+        <div>${cell}</div>
+      </td>`).join("")}</tr>`).join("")}
+    </tbody></table></div>`;
 }
 
 function rowAction(action, label, id = "") {
@@ -64,7 +73,7 @@ function overview(stats) {
     <div><dt><span class="icon-tile">${icon("users")}</span>Guru BK sedang login</dt><dd>${sum("activeTeachers")}</dd></div>
     <div><dt><span class="icon-tile">${icon("user")}</span>Siswa sedang login</dt><dd>${sum("activeStudents")}</dd></div>
   </dl>
-  <section class="workspace-section">
+  <section class="workspace-section dashboard-fill">
     <div class="workspace-section-heading"><h2>Aktivitas per sekolah</h2><p>Jumlah akun yang sedang login dari total akun terdaftar.</p></div>
     ${table(["Sekolah", "Guru BK login / terdaftar", "Siswa login / terdaftar", "Daftar siswa"], stats.map((school) => [
       identity(school.name), `${school.activeTeachers} / ${school.teachers}`, `${school.activeStudents} / ${school.students}`,
@@ -160,16 +169,42 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const feedback = document.getElementById("monitor-feedback");
   const actions = document.getElementById("monitor-actions");
   const nav = document.getElementById("monitor-nav");
+  setupMobileMenu(document.getElementById("monitor-menu-toggle"));
+  const centralInBk = user.role === "admin" && workspace === "bk";
+  const schoolQuery = new URLSearchParams(window.location.search).get("sekolah") || "";
+  const bkSchoolQuery = centralInBk && schoolQuery ? `?sekolah=${encodeURIComponent(schoolQuery)}` : "";
+  const workspacePath = (slug) => pagePath(workspace, slug) + bkSchoolQuery;
+  const bkApi = (path, method, body) => api(path + (centralInBk ? `?school=${encodeURIComponent(schoolQuery)}` : ""), method, body);
   const defaultPage = central ? "ringkasan" : "beranda-bk";
   document.getElementById("monitor-role").textContent = name;
   document.getElementById("monitor-title").textContent = pages[section];
   document.getElementById("monitor-description").textContent = pageDetails[section || defaultPage][1];
   document.getElementById("admin-name-label").textContent = user.fullName;
   nav.innerHTML = Object.entries(pages).map(([slug, label]) =>
-    `<a href="${pagePath(workspace, slug)}"${slug === section ? ' aria-current="page"' : ""}>${icon(pageDetails[slug || defaultPage][0])}${escapeHtml(label)}</a>`).join("");
-  const activeLink = nav.querySelector('[aria-current="page"]');
-  const activeEdge = activeLink.getBoundingClientRect().right;
-  nav.scrollLeft = Math.max(0, activeEdge - nav.getBoundingClientRect().right);
+    `<a href="${escapeHtml(workspacePath(slug))}"${slug === section ? ' aria-current="page"' : ""}>${icon(pageDetails[slug || defaultPage][0])}${escapeHtml(label)}</a>`).join("");
+  if (central) nav.insertAdjacentHTML("beforeend", `<a href="/bk">${icon("school")}Ruang Guru BK</a>`);
+  if (centralInBk) nav.insertAdjacentHTML("beforeend", `<a href="/admin">${icon("home")}Kembali ke Admin Central</a>`);
+
+  const home = document.getElementById("monitor-home");
+  home.hidden = !section;
+  home.href = workspacePath("");
+
+  if (centralInBk) {
+    const { schools } = await api("central/views/sekolah");
+    const context = document.getElementById("monitor-context");
+    const selectedSchool = schools.find(({ id }) => id === schoolQuery);
+    const schoolPath = (id) => pagePath(workspace, section) + (id ? `?sekolah=${encodeURIComponent(id)}` : "");
+    context.innerHTML = `<div class="workspace-filters"><label class="workspace-school-picker">Sekolah untuk ruang Guru BK
+      <select class="form-control">${options([["", selectedSchool ? "Hapus pilihan sekolah" : "Pilih sekolah"], ...schoolOptions(schools)], selectedSchool?.id || "")}</select>
+      </label></div>`;
+    context.querySelector("select").onchange = ({ target }) => window.location.assign(schoolPath(target.value));
+    if (section !== "rpl" && !selectedSchool) {
+      content.innerHTML = schools.length
+        ? '<p class="workspace-empty dashboard-fill">Pilih sekolah untuk membuka data dan fitur Guru BK.</p>'
+        : '<p class="workspace-empty dashboard-fill">Tambahkan sekolah melalui menu <a href="/admin/sekolah">Sekolah &amp; Kelas</a>.</p>';
+      return;
+    }
+  }
 
   if (section === "rpl") {
     actions.innerHTML = `<a href="${escapeHtml(APP_CONFIG.consultationFormUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Formulir konsultasi</a>`;
@@ -177,11 +212,12 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     return;
   }
   if (!central && section !== "siswa") {
-    await setupBkPage(section, { content, feedback, actions });
+    await setupBkPage(section, { content, feedback, actions, bkApi, workspacePath });
     return;
   }
 
   const endpoint = central ? "central/views/" + (section || "ringkasan") : "bk/students";
+  const requestDirectory = central ? api : bkApi;
   const studentsView = section === "siswa";
   const filters = new URLSearchParams(window.location.search);
   let school = filters.get("sekolah") || "";
@@ -231,7 +267,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
           <label>Cari peserta didik<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(search)}" placeholder="Nama, email, atau NIS"></label>
           <label>Kelas<select class="form-control" id="filter-class">${options([["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
             ...data.classes.map(({ id, name }) => [id, name])], grade)}</select></label>
-        </div>`}<div id="directory-results"></div>`;
+        </div>`}<div id="directory-results" class="dashboard-panel"></div>`;
       renderStudentRows();
     } else if (section === "guru-bk") {
       content.innerHTML = directoryFilters(data, school, grade, false) + table(["Guru BK", "Sekolah", "Status sesi"],
@@ -254,7 +290,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   async function refresh(message = "") {
     content.setAttribute("aria-busy", "true");
     try {
-      data = await api(endpoint);
+      data = await requestDirectory(endpoint);
       render();
       feedback.textContent = message;
     } catch (error) {
@@ -291,7 +327,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     if (!data) return;
     if (action === "export") {
       try {
-        const current = await api(central && school ? `${endpoint}?school=${encodeURIComponent(school)}` : endpoint);
+        const current = await requestDirectory(central && school ? `${endpoint}?school=${encodeURIComponent(school)}` : endpoint);
         exportAdminRecapWorkbook(current.students.filter(matchesClass).filter(matchesSearch));
       } catch (error) {
         feedback.textContent = error.message;

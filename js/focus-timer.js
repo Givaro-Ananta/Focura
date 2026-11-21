@@ -1,7 +1,11 @@
 import { getStudentData, loadStudentData, updateStudentData } from "./storage.js";
 
 export function setupFocusTimer(refreshStudentPanels) {
+  const studentView = document.getElementById("student-app-view");
   const display = document.getElementById("timer-display");
+  const island = document.getElementById("focus-island");
+  const islandState = document.getElementById("focus-island-state");
+  const islandTime = document.getElementById("focus-island-time");
   const start = document.getElementById("btn-start-timer");
   const pause = document.getElementById("btn-pause-timer");
   const finish = document.getElementById("btn-finish-timer");
@@ -20,18 +24,40 @@ export function setupFocusTimer(refreshStudentPanels) {
   let busy = false;
   let completionAttempted = false;
   let requestId;
+  let focusRunning;
 
   const duration = () => selected === "custom" ? custom.valueAsNumber : Number(selected);
   const remaining = () => timer
     ? Math.max(0, localDeadline ? localDeadline - Date.now() : timer.remainingMs)
     : duration() * 60_000;
 
+  function updateFocusPalette(running) {
+    if (focusRunning === running) return;
+    const initial = focusRunning === undefined;
+    focusRunning = running;
+    const applyPalette = () => studentView.classList.toggle("focus-running", focusRunning);
+    if (initial || document.hidden || !document.startViewTransition ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      applyPalette();
+      return;
+    }
+    document.startViewTransition(applyPalette);
+  }
+
   function render() {
     const seconds = Math.ceil(remaining() / 1000);
     const ready = Boolean(timer?.deadline && seconds === 0);
-    display.textContent = seconds >= 0 && seconds <= 10_800
+    updateFocusPalette(Boolean(timer?.deadline && seconds > 0));
+    const time = seconds >= 0 && seconds <= 10_800
       ? [Math.floor(seconds / 60), seconds % 60].map((part) => String(part).padStart(2, "0")).join(":")
       : "—:—";
+    if (display.textContent !== time) display.textContent = time;
+    island.hidden = !timer;
+    if (timer) {
+      const label = ready ? "Waktu habis" : timer.deadline ? "Sedang fokus" : "Fokus dijeda";
+      if (islandState.textContent !== label) islandState.textContent = label;
+      if (islandTime.textContent !== time) islandTime.textContent = time;
+    }
     start.hidden = Boolean(timer?.deadline);
     start.textContent = timer ? "Lanjutkan" : "Mulai sesi fokus";
     pause.hidden = !timer?.deadline || ready;

@@ -10,6 +10,7 @@ export const WORKSPACES = {
       akun: "Akun",
       "orang-tua": "Orang Tua/Wali",
       rpl: "Panduan RPL",
+      "pratinjau-siswa": "Pratinjau Ruang Siswa",
     },
   },
   bk: {

@@ -6,12 +6,13 @@
 
 import { APP_CONFIG } from "./config.js";
 import { api, getActiveSession, loginUser, logoutUser } from "./auth.js";
-import { getStudentData, loadStudentData, updateStudentData } from "./storage.js";
+import { getStudentData, loadStudentData, loadStudentModules, updateStudentData, useStudentPreview } from "./storage.js";
 import { exportStudentWorkbook, importReportText, importStudentWorkbook } from "./excel-sync.js";
 import { setupFocusTimer } from "./focus-timer.js";
+import { syncDropdown } from "./dropdowns.js";
 import { driveLinks, JAKARTA } from "./learning-rules.js";
 import { setupMonitor } from "./monitor.js";
-import { escapeHtml, openDriveModal } from "./ui.js";
+import { escapeHtml, openDriveModal, setupMobileMenu } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 export async function initializeApp() {
@@ -39,7 +40,10 @@ export async function initializeApp() {
   if (demo) {
     document.getElementById("auth-help").textContent = "Mode demo menggunakan data contoh.";
     document.getElementById("demo-account-choice").classList.remove("hidden");
-    if (workspace === "bk") demoAccount.value = "bk";
+    if (workspace === "bk") {
+      demoAccount.value = "bk";
+      syncDropdown(demoAccount);
+    }
     demoAccount.onchange = () => { buttonLabel.textContent = loginLabel(); };
   } else {
     document.getElementById("teacher-registration").classList.remove("hidden");
@@ -87,15 +91,18 @@ export async function initializeApp() {
       return;
     }
     const userWorkspace = Object.keys(WORKSPACES).find((name) => WORKSPACES[name].role === user.role);
-    if (workspace !== userWorkspace) {
+    const studentPreview = user.role === "admin" && workspace === "admin" && section === "pratinjau-siswa";
+    if (workspace !== userWorkspace && !(user.role === "admin" && workspace === "bk")) {
       window.location.replace(userWorkspace ? pagePath(userWorkspace) : "/");
       return;
     }
-    if (user.role === "student") {
+    if (user.role === "student" || studentPreview) {
+      if (studentPreview) useStudentPreview();
       user.kelas = await loadStudentData();
       if (!button.isConnected) return;
-      renderStudentDashboard(user);
+      renderStudentDashboard(user, studentPreview);
       document.getElementById("student-app-view").classList.remove("hidden");
+      loading?.remove();
     } else if (user.role === "guardian") {
       const children = await api("guardian/children");
       if (!button.isConnected) return;
@@ -146,14 +153,22 @@ async function saveLearning(action, values) {
 /* ==========================================================================
    DASHBOARD SISWA (TERISOLASI PER AKUN)
    ========================================================================== */
-function renderStudentDashboard(user) {
-  document.getElementById("student-greeting").textContent = `Halo, ${user.fullName}!`;
-  document.getElementById("student-meta").textContent = `NIS: ${user.nis || "—"} • ${user.kelas}`;
+function renderStudentDashboard(user, preview) {
+  document.getElementById("student-greeting").textContent = preview ? "Pratinjau Ruang Siswa" : `Halo, ${user.fullName}!`;
+  document.getElementById("student-meta").textContent = preview
+    ? "Aktivitas di halaman ini disimpan sebagai data uji milik Admin Central."
+    : `NIS: ${user.nis || "—"} • ${user.kelas}`;
+  document.getElementById("student-preview-exit").hidden = !preview;
   document.getElementById("student-account-info").textContent = `${user.email} · ${user.kelas} · Ruang pribadi aktif`;
 
   // Navigasi Menu Siswa
+  const menuToggle = document.getElementById("student-menu-toggle");
+  setupMobileMenu(menuToggle);
   document.querySelectorAll("#student-nav .nav-item").forEach((btn) => {
-    btn.onclick = () => switchStudentSection(btn.dataset.section);
+    btn.onclick = () => {
+      switchStudentSection(btn.dataset.section);
+      if (menuToggle.offsetWidth) menuToggle.focus();
+    };
   });
   document.querySelectorAll("[data-open-section]").forEach((btn) => {
     btn.onclick = () => {
@@ -214,6 +229,7 @@ function setupStudentImport() {
 }
 
 function switchStudentSection(sectionId) {
+  document.getElementById("student-menu-toggle").ariaExpanded = "false";
   document.querySelectorAll(".student-panel").forEach((panel) => {
     panel.classList.toggle("hidden", panel.id !== `sec-${sectionId}`);
   });
@@ -250,7 +266,7 @@ function refreshStudentPanels() {
     ? data.reflections
         .map(
           (r) => `
-      <div class="card" style="margin-bottom:12px;padding:16px;">
+      <div class="card reflection-entry">
         <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">${escapeHtml(r.date)}</div>
         <p><strong>Dipelajari:</strong> ${escapeHtml(r.learned)}</p>
         <p><strong>Perasaan:</strong> ${escapeHtml(r.feeling)}</p>
@@ -345,6 +361,7 @@ function setupTaskManager() {
       editId = id;
       title.value = task.title;
       priority.value = task.priority;
+      syncDropdown(priority);
       submit.textContent = "Simpan perubahan";
       cancel.hidden = false;
       title.focus();
@@ -413,7 +430,7 @@ async function renderDriveModules() {
   grid.textContent = "Memuat materi…";
   grid.setAttribute("aria-busy", "true");
   try {
-    const modules = await api("me/modules");
+    const modules = await loadStudentModules();
     grid.innerHTML = modules.map((mod) => {
       const links = driveLinks(mod.editUrl);
       if (!links) return "";
@@ -441,7 +458,7 @@ function renderRPLSection(containerId) {
   const rpl = APP_CONFIG.rplDocument;
 
   container.innerHTML = `
-    <article class="card rpl-document">
+    <article class="card rpl-document dashboard-fill">
       <button type="button" class="btn btn-outline rpl-print">Cetak atau simpan PDF</button>
       <h2 class="panel-title rpl-title">${escapeHtml(rpl.judul)}</h2>
       <div class="table-responsive" style="margin-bottom:16px;">
