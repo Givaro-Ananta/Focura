@@ -6,7 +6,8 @@
     </linearGradient>
   </defs>
   <rect x="8" y="8" width="104" height="104" rx="26" fill="url(#focuraGrad)"/>
-  <circle cx="60" cy="60" r="32" fill="none" stroke="#ffffff" stroke-width="6" stroke-dasharray="150 35"/>
-  <circle cx="60" cy="60" r="14" fill="#ffffff"/>
-  <path d="M60 22 V32 M60 88 V98 M22 60 H32 M88 60 H98" stroke="#bae6fd" stroke-width="5" stroke-linecap="round"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="7" d="M60 37C56 29 48 26 41 29C35 31 31 36 31 42C25 46 22 52 24 58C21 65 24 73 31 77C31 84 36 89 43 90C48 95 55 94 60 88C65 94 72 95 77 90C84 89 89 84 89 77C96 73 99 65 96 58C98 52 95 46 89 42C89 36 85 31 79 29C72 26 64 29 60 37ZM60 37V88"/>
+    <path stroke-width="5.5" d="M31 42C39 42 45 47 45 54M31 77C33 70 39 66 46 68M89 42C81 42 75 47 75 54M89 77C87 70 81 66 74 68"/>
+  </g>
 </svg>

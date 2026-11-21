@@ -33,6 +33,11 @@ export const sheets = {
     return new Set(values.map(([value]) => emailAddress(value)).filter((email) => /^[^\s@]+@[^\s@]+$/.test(email)));
   },
 
+  async addEmail(email) {
+    const { allowlist } = connection();
+    await request(allowlist, "/values/Email%21A%3AA:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS", { values: [[email]] });
+  },
+
   async read(...tables) {
     const { data } = connection();
     const query = new URLSearchParams({ valueRenderOption: "UNFORMATTED_VALUE" });

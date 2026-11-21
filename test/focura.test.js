@@ -24,6 +24,10 @@ function fixture() {
   let now = 1_790_000_000_000;
   const store = {
     async emails() { return new Set(emails); },
+    async addEmail(email) {
+      assert(!emails.has(email), "Email tidak boleh ditambahkan dua kali");
+      emails.add(email);
+    },
     async read(...names) {
       return Object.fromEntries(names.map((name) => [name, structuredClone(tables[name])]));
     },
@@ -37,7 +41,7 @@ function fixture() {
   };
   const service = createFocura(store, { now: () => now, masterEmail: "master@example.test" });
   const actor = async (entry) => service.context(await service.startSession(profile(entry)));
-  return { admin, teacher, secondTeacher, guardian, student, stranger, service, tables, emails, actor,
+  return { admin, teacher, secondTeacher, guardian, student, stranger, service, store, tables, emails, actor,
     advance(seconds) { now += seconds * 1000; } };
 }
 
@@ -56,6 +60,92 @@ test("Google login requires verified, allowlisted email and an assigned role", a
   emails.add("master@example.test");
   const master = await actor({ id: "master", email: "master@example.test" });
   assert.equal(master.actor.role, "admin");
+});
+
+test("Guru BK self-registration requires verified Google identity and Admin Central approval", async () => {
+  const { service, admin, teacher, student, tables, emails, actor } = fixture();
+  const applicant = { email: " BARU@example.test ", email_verified: true, sub: "google-baru", name: "Guru Baru" };
+  await assert.rejects(service.registerTeacher({ ...applicant, email_verified: false }), { status: 403 });
+  await assert.rejects(service.registerTeacher({ ...applicant, email: "master@example.test" }), { status: 403 });
+  assert.equal(await service.registerTeacher(profile(student)), false);
+  assert.deepEqual(await Promise.all([service.registerTeacher(applicant), service.registerTeacher(applicant)]), [true, true]);
+  await assert.rejects(service.registerTeacher({ ...applicant, sub: "google-lain" }), { status: 403 });
+  await assert.rejects(service.registerTeacher({ ...applicant, email: "lain@example.test" }), { status: 403 });
+  assert.equal(tables.Sesi.length, 0);
+  assert(!emails.has("baru@example.test"));
+  await assert.rejects(service.startSession(applicant), { status: 409 });
+  const access = await actor(admin);
+  const directory = await service.centralView(access, "akun");
+  const pending = directory.accounts.filter(({ email }) => email === "baru@example.test");
+  assert.equal(pending.length, 1);
+  const [account] = pending;
+  assert.equal(account.fullName, applicant.name);
+  assert.equal(account.role, "bk");
+  assert.equal(account.registrationPending, true);
+  assert.equal(account.enabled, false);
+  assert.equal(account.emailAllowed, false);
+  assert.equal(account.googleSub, undefined);
+  const teacherAccess = await actor(teacher);
+  assert.throws(() => service.saveAccount(teacherAccess, { schoolId: "a", enabled: true }, account.id), { status: 403 });
+  await assert.rejects(service.saveAccount(access, { enabled: true }, account.id), { status: 400 });
+  await assert.rejects(service.saveAccount(access, { role: "student", schoolId: "a", enabled: true }, account.id), { status: 400 });
+  assert(!emails.has("baru@example.test"));
+  await service.saveAccount(access, { schoolId: "a", enabled: true }, account.id);
+  assert(emails.has("baru@example.test"));
+  const reviewed = (await service.centralView(await actor(admin), "akun")).accounts.find(({ id }) => id === account.id);
+  assert.equal(reviewed.emailAllowed, true);
+  await assert.rejects(service.startSession({ ...applicant, sub: "google-lain" }), { status: 403 });
+  const session = await service.startSession(applicant);
+  const approved = await service.context(session);
+  assert.equal(approved.actor.registrationPending, false);
+  assert.deepEqual((await service.dashboard(approved)).students.map(({ id }) => id), [student.id]);
+  assert.equal(await service.registerTeacher(applicant), false);
+  await service.saveAccount(access, { enabled: false }, account.id);
+  await assert.rejects(service.context(session), { status: 401 });
+  assert.equal(await service.registerTeacher(applicant), false);
+  await assert.rejects(service.startSession(applicant), { status: 403 });
+});
+
+test("Admin Central can create Guru BK and student accounts and their emails remain revocable", async () => {
+  const { service, admin, student, emails, actor } = fixture();
+  const access = await actor(admin);
+  for (const role of ["bk", "student"]) {
+    const profile = { email: `${role}-baru@example.test`, email_verified: true, sub: `google-${role}-baru` };
+    const input = { ...profile, fullName: "Akun Baru", role, schoolId: "a" };
+    await service.saveAccount(access, input);
+    assert(emails.has(profile.email));
+    await assert.rejects(service.saveAccount(access, input), { status: 409 });
+    const session = await service.startSession(profile);
+    const account = (await service.context(session)).actor;
+    assert.equal(account.role, role);
+    emails.delete(profile.email);
+    await assert.rejects(service.context(session), { status: 401 });
+  }
+  await assert.rejects(service.saveAccount(access, { email: "salah", role: "student", schoolId: "a", fullName: "Salah" }), { status: 400 });
+  await assert.rejects(service.saveAccount(access, { email: "baru@example.test", role: "guardian", fullName: "Wali" }), { status: 400 });
+  await assert.rejects(service.saveAccount(access, { email: "master@example.test", role: "bk", schoolId: "a", fullName: "Master" }), { status: 403 });
+  const legacySession = await service.startSession(profile(student));
+  emails.delete(student.email);
+  await assert.rejects(service.context(legacySession), { status: 401 });
+  await assert.rejects(service.startSession(profile(student)), { status: 403 });
+});
+
+test("An interrupted spreadsheet sync can be retried without enabling an incomplete account", async () => {
+  const { service, admin, store, emails, tables, actor } = fixture();
+  const access = await actor(admin);
+  const newAccount = { id: "retry", email: "retry@example.test", role: "student", schoolId: "a", fullName: "Siswa Baru" };
+  const write = store.write;
+  store.write = async () => { throw new Error("Spreadsheet operasional tidak tersedia"); };
+  try {
+    await assert.rejects(service.saveAccount(access, newAccount), /operasional/);
+    assert(emails.has(newAccount.email));
+    assert(!tables.Akun.some(({ email }) => email === newAccount.email));
+    await assert.rejects(service.startSession(profile(newAccount)), { status: 403 });
+  } finally {
+    store.write = write;
+  }
+  await service.saveAccount(access, newAccount);
+  assert.equal((await actor(newAccount)).actor.role, "student");
 });
 
 test("Admin sees both schools and counts users once across sessions", async () => {

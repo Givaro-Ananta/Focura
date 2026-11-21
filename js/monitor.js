@@ -9,7 +9,27 @@ export function escapeHtml(value) {
 }
 
 const roles = { admin: "Admin Central", bk: "Guru BK", student: "Siswa", guardian: "Orang Tua/Wali" };
+const accountStatuses = {
+  pending: "Menunggu persetujuan",
+  enabled: "Diizinkan",
+  disabled: "Dinonaktifkan",
+  unlisted: "Email belum diizinkan",
+  unprofiled: "Belum ada profil",
+};
 const schoolOptions = (schools) => schools.map(({ id, name }) => [id, name]);
+const pageDetails = {
+  ringkasan: ["home", "Pantau sesi Guru BK dan siswa di sekolah yang terdaftar."],
+  "guru-bk": ["users", "Lihat daftar Guru BK dan aktivitas login per sekolah."],
+  siswa: ["user", "Pantau status sesi dan progres belajar siswa."],
+  sekolah: ["school", "Kelola sekolah dan kelas yang menggunakan Focura."],
+  akun: ["lock", "Tetapkan peran dan izin login untuk akun yang terdaftar."],
+  "orang-tua": ["users", "Kelola siswa yang dapat dilihat oleh setiap orang tua atau wali."],
+  rpl: ["document", "Panduan pelaksanaan layanan bimbingan klasikal menggunakan Focura."],
+};
+
+function icon(name) {
+  return `<svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#${name}" /></svg>`;
+}
 
 function options(items, selected) {
   return items.map(([value, label]) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(label)}</option>`).join("");
@@ -17,7 +37,7 @@ function options(items, selected) {
 
 function table(headers, rows, empty) {
   if (!rows.length) return `<p class="workspace-empty">${escapeHtml(empty)}</p>`;
-  return `<div class="workspace-table"><table><thead><tr>${headers.map((header) => `<th scope="col">${header}</th>`).join("")}
+  return `<div class="workspace-table" tabindex="0" role="region" aria-label="Tabel ${headers[0].toLowerCase()}"><table><thead><tr>${headers.map((header) => `<th scope="col">${header}</th>`).join("")}
     </tr></thead><tbody>${rows.map((cells) => `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -38,12 +58,12 @@ function sessionStatus(account) {
 function overview(stats) {
   const sum = (field) => stats.reduce((total, school) => total + school[field], 0);
   return `<dl class="workspace-stats">
-    <div><dt>Sekolah</dt><dd>${stats.length}</dd></div>
-    <div><dt>Guru BK sedang login</dt><dd>${sum("activeTeachers")} <span>/ ${sum("teachers")}</span></dd></div>
-    <div><dt>Siswa sedang login</dt><dd>${sum("activeStudents")} <span>/ ${sum("students")}</span></dd></div>
+    <div><dt><span class="icon-tile">${icon("school")}</span>Sekolah terdaftar</dt><dd>${stats.length}</dd></div>
+    <div><dt><span class="icon-tile">${icon("users")}</span>Guru BK sedang login</dt><dd>${sum("activeTeachers")}</dd></div>
+    <div><dt><span class="icon-tile">${icon("user")}</span>Siswa sedang login</dt><dd>${sum("activeStudents")}</dd></div>
   </dl>
   <section class="workspace-section">
-    <h2>Aktivitas per sekolah</h2>
+    <div class="workspace-section-heading"><h2>Aktivitas per sekolah</h2><p>Jumlah akun yang sedang login dari total akun terdaftar.</p></div>
     ${table(["Sekolah", "Guru BK login / terdaftar", "Siswa login / terdaftar", "Daftar siswa"], stats.map((school) => [
       identity(school.name), `${school.activeTeachers} / ${school.teachers}`, `${school.activeStudents} / ${school.students}`,
       `<a class="workspace-row-action" href="/admin/siswa?sekolah=${encodeURIComponent(school.id)}">Lihat siswa</a>`,
@@ -69,16 +89,32 @@ function schoolDirectory(data) {
   }), "Belum ada sekolah.");
 }
 
-function accountDirectory(data) {
-  const rows = data.accounts.map((account) => [
-    identity(account.fullName, account.email), roles[account.role], account.enabled ? "Diizinkan" : "Dinonaktifkan",
-    rowAction("edit-account", "Kelola", account.email),
-  ]);
-  for (const email of data.pendingEmails) {
-    rows.push([identity(email), "—", "Belum ada profil", rowAction("edit-account", "Buat profil", email)]);
+function accountStatus(account) {
+  if (account.registrationPending) return "pending";
+  if (!account.enabled) return "disabled";
+  return account.emailAllowed ? "enabled" : "unlisted";
+}
+
+function accountDirectory(data, role, status) {
+  const rows = data.accounts.filter((account) => (!role || account.role === role) && (!status || accountStatus(account) === status))
+    .sort((a, b) => Number(Boolean(b.registrationPending)) - Number(Boolean(a.registrationPending)))
+    .map((account) => [
+      identity(account.fullName, account.email), roles[account.role],
+      accountStatuses[accountStatus(account)],
+      rowAction("edit-account", account.registrationPending ? "Tinjau pendaftaran" : "Kelola", account.email),
+    ]);
+  if (!role && (!status || status === "unprofiled")) {
+    for (const email of data.pendingEmails) {
+      rows.push([identity(email), "—", accountStatuses.unprofiled, rowAction("edit-account", "Buat profil", email)]);
+    }
   }
-  return `<p class="workspace-note">Tambahkan email baru di spreadsheet, lalu muat ulang daftar ini.</p>
-    ${table(["Akun", "Peran", "Izin login", "Tindakan"], rows, "Belum ada akun.")}`;
+  const empty = role || status ? "Tidak ada akun yang cocok. Ubah pilihan filter untuk melihat akun lain." : "Belum ada akun.";
+  return `${data.schools.length ? "" : '<p class="workspace-note">Tambahkan sekolah melalui <a href="/admin/sekolah">Sekolah &amp; Kelas</a> untuk membuat atau menyetujui akun Guru BK dan siswa.</p>'}
+    <div class="workspace-filters">
+      <label>Peran<select class="form-control" id="filter-account-role">${options([["", "Semua peran"], ...Object.entries(roles)], role)}</select></label>
+      <label>Status akun<select class="form-control" id="filter-account-status">${options([["", "Semua status"], ...Object.entries(accountStatuses)], status)}</select></label>
+    </div>
+    ${table(["Akun", "Peran", "Status akun", "Tindakan"], rows, empty)}`;
 }
 
 function guardianDirectory(data) {
@@ -103,14 +139,18 @@ function showDialog(container, title, fields) {
 
 function accountForm(data, address) {
   const selected = data.accounts.find(({ email }) => email === address);
-  return `<form data-operation="account" data-id="${escapeHtml(selected?.id)}" data-email="${escapeHtml(address)}" class="workspace-form">
-    <label>Email<input class="form-control" value="${escapeHtml(address)}" readonly></label>
+  const pending = selected?.registrationPending;
+  const roleChoices = pending ? [["bk", roles.bk]] : address ? Object.entries(roles)
+    : [["", "Pilih peran"], ["bk", roles.bk], ["student", roles.student]];
+  return `<form data-operation="account" data-id="${escapeHtml(selected?.id)}" class="workspace-form">
+    ${pending ? '<p>Pilih sekolah untuk memberi Guru BK akses ke ruang kerja sekolah tersebut.</p>' : ""}
+    <label>Email Google<input class="form-control" type="email" name="email" maxlength="254" required value="${escapeHtml(address)}"${address ? " readonly" : ""}></label>
     <label>Nama<input class="form-control" name="fullName" required maxlength="120" value="${escapeHtml(selected?.fullName)}"></label>
-    <label>Peran<select class="form-control" name="role">${options(Object.entries(roles), selected?.role || "student")}</select></label>
+    <label>Peran<select class="form-control" name="role" required>${options(roleChoices, selected?.role || (address ? "student" : ""))}</select></label>
     <label data-account-school>Sekolah<select class="form-control" name="schoolId">${options([["", "Pilih sekolah"], ...schoolOptions(data.schools)], selected?.schoolId)}</select></label>
     <label data-account-nis>NIS<input class="form-control" name="nis" maxlength="60" value="${escapeHtml(selected?.nis)}"></label>
-    <label class="workspace-check"><input type="checkbox" name="enabled" ${selected?.enabled !== false ? "checked" : ""}> Izinkan login</label>
-    <button type="submit" class="btn btn-primary">Simpan akun</button>
+    ${pending ? '<input type="hidden" name="enabled" value="on">' : `<label class="workspace-check"><input type="checkbox" name="enabled" ${selected?.enabled !== false ? "checked" : ""}> Izinkan login</label>`}
+    <button type="submit" class="btn btn-primary">${pending ? "Setujui pendaftaran" : "Simpan akun"}</button>
   </form>`;
 }
 
@@ -130,10 +170,13 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const feedback = document.getElementById("monitor-feedback");
   const actions = document.getElementById("monitor-actions");
   const nav = document.getElementById("monitor-nav");
+  const defaultPage = central ? "ringkasan" : "siswa";
   document.getElementById("monitor-role").textContent = name;
   document.getElementById("monitor-title").textContent = pages[section];
+  document.getElementById("monitor-description").textContent = pageDetails[section || defaultPage][1];
   document.getElementById("admin-name-label").textContent = user.fullName;
-  nav.innerHTML = Object.entries(pages).map(([slug, label]) => `<a href="${pagePath(workspace, slug)}"${slug === section ? ' aria-current="page"' : ""}>${escapeHtml(label)}</a>`).join("");
+  nav.innerHTML = Object.entries(pages).map(([slug, label]) =>
+    `<a href="${pagePath(workspace, slug)}"${slug === section ? ' aria-current="page"' : ""}>${icon(pageDetails[slug || defaultPage][0])}${escapeHtml(label)}</a>`).join("");
   const activeLink = nav.querySelector('[aria-current="page"]');
   const activeEdge = activeLink.getBoundingClientRect().right;
   nav.scrollLeft = Math.max(0, activeEdge - nav.getBoundingClientRect().right);
@@ -149,6 +192,8 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const filters = new URLSearchParams(window.location.search);
   let school = filters.get("sekolah") || "";
   let grade = filters.get("kelas") || "";
+  let accountRole = "";
+  let accountState = "";
   let data;
   let busy = false;
   const matchesSchool = (row) => !central || !school || row.schoolId === school;
@@ -156,6 +201,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
 
   actions.innerHTML = `<button type="button" class="btn btn-outline" data-action="refresh">Muat ulang</button>
     ${studentsView ? '<button type="button" class="btn btn-outline" data-action="export">Ekspor Excel</button>' : ""}
+    ${section === "akun" ? '<button type="button" class="btn btn-primary" data-action="add-account" disabled>Tambah akun</button>' : ""}
     ${section === "sekolah" ? '<button type="button" class="btn btn-primary" data-action="add-school">Tambah sekolah</button>' : ""}
     ${section === "orang-tua" ? '<button type="button" class="btn btn-primary" data-action="link" disabled>Tautkan wali</button>' : ""}`;
 
@@ -178,7 +224,8 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     } else if (section === "sekolah") {
       content.innerHTML = schoolDirectory(data);
     } else if (section === "akun") {
-      content.innerHTML = accountDirectory(data);
+      actions.querySelector('[data-action="add-account"]').disabled = !data.schools.length;
+      content.innerHTML = accountDirectory(data, accountRole, accountState);
     } else if (section === "orang-tua") {
       const canLink = ["guardian", "student"].every((role) => data.accounts.some((account) => account.role === role));
       actions.querySelector('[data-action="link"]').disabled = !canLink;
@@ -248,8 +295,10 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
         <p>${escapeHtml(selected.name)}</p>
         <label>Nama kelas<input class="form-control" name="name" required maxlength="80"></label>
         <button type="submit" class="btn btn-primary">Simpan kelas</button></form>`);
-    } else if (action === "edit-account") {
-      showDialog(content, "Profil akun", accountForm(data, id));
+    } else if (action === "add-account" || action === "edit-account") {
+      const pending = data.accounts.some(({ email, registrationPending }) => email === id && registrationPending);
+      const title = pending ? "Tinjau pendaftaran Guru BK" : id ? "Profil akun" : "Tambah akun";
+      showDialog(content, title, accountForm(data, id));
       accountFields(content.querySelector('form[data-operation="account"]'));
     } else if (action === "edit-class") {
       const selected = data.students.find((entry) => entry.id === id);
@@ -288,6 +337,11 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       window.history.replaceState(window.history.state, "", window.location.pathname + (query ? "?" + query : ""));
       render();
       document.getElementById(input.id).focus();
+    } else if (input.id === "filter-account-role" || input.id === "filter-account-status") {
+      if (input.id === "filter-account-role") accountRole = input.value;
+      else accountState = input.value;
+      render();
+      document.getElementById(input.id).focus();
     } else if (input.name === "role") {
       accountFields(input.form);
     }
@@ -295,14 +349,14 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
 
   content.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const { operation, id, email } = event.target.dataset;
+    const { operation, id } = event.target.dataset;
     const form = Object.fromEntries(new FormData(event.target));
     const remove = event.submitter?.value === "remove";
     const dialog = event.target.closest("dialog");
     const writes = {
       school: () => api(id ? `central/schools/${id}` : "central/schools", id ? "PATCH" : "POST", { name: form.name }),
       newClass: () => api(`schools/${id}/classes`, "POST", { name: form.name }),
-      account: () => api(id ? `central/accounts/${id}` : "central/accounts", id ? "PATCH" : "POST", { ...form, email, enabled: Boolean(form.enabled) }),
+      account: () => api(id ? `central/accounts/${id}` : "central/accounts", id ? "PATCH" : "POST", { ...form, enabled: Boolean(form.enabled) }),
       class: () => api(`central/students/${id}/class`, "PATCH", { classId: remove ? null : form.classId }),
       link: () => api("central/guardian-links", "POST", form),
     };

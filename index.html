@@ -7,46 +7,68 @@
 </head>
 <body>
 
-  <section id="auth-view" class="auth-wrapper" aria-labelledby="login-title">
-    <div class="auth-landscape-card">
-      <div class="auth-brand-panel">
-        <div class="auth-logo-row">
-          <img src="/assets/svg/logo-focura.svg" alt="" width="42" height="42" />
-          <div><strong>Focura</strong><span>Ruang Fokus</span></div>
-        </div>
-        <img class="auth-illustration" src="/assets/svg/student-focus.svg" alt="" width="252" height="182" />
+  <div id="auth-view" class="auth-wrapper">
+    <header class="auth-header">
+      <div class="auth-logo-row">
+        <img src="/assets/svg/logo-focura.svg" alt="" width="44" height="44" />
+        <div><strong>Focura</strong><span>Ruang Fokus</span></div>
       </div>
+      <p>Bimbingan &amp; Konseling SMA</p>
+    </header>
+    <main class="auth-landscape-card" aria-labelledby="login-title">
       <div class="auth-form-panel">
+        <span class="icon-tile auth-access-icon" aria-hidden="true"><svg><use href="/assets/svg/interface.svg#lock" /></svg></span>
         <h1 id="login-title">Masuk ke Focura</h1>
-        <p id="auth-help">Gunakan akun Google yang sudah didaftarkan Admin Central.</p>
-        <div id="auth-alert" class="hidden" role="status"></div>
-        <button id="btn-google-login" type="button" class="btn btn-primary btn-block" disabled>Masuk dengan Google</button>
+        <p id="auth-help">Gunakan akun Google yang sudah aktif di Focura.</p>
+        <div id="auth-alert" role="alert"></div>
+        <div id="auth-status" role="status"></div>
+        <button id="btn-google-login" type="button" class="btn btn-primary btn-block" aria-describedby="auth-help" disabled>
+          <svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#key" /></svg>
+          <span id="auth-button-label">Masuk dengan Google</span>
+        </button>
+        <div id="teacher-registration" class="auth-registration hidden">
+          <button id="btn-teacher-register" type="button" class="btn btn-outline btn-block" aria-describedby="teacher-register-help" disabled>Daftar sebagai Guru BK</button>
+          <p id="teacher-register-help">Daftar dengan Google. Admin Central akan meninjau pendaftaranmu sebelum akses dibuka.</p>
+        </div>
+        <div class="auth-support">
+          <svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#help" /></svg>
+          <p><strong>Butuh bantuan masuk?</strong> Hubungi Admin Central jika akunmu belum terdaftar.</p>
+        </div>
       </div>
-    </div>
-  </section>
+      <div class="auth-brand-panel">
+        <div class="auth-intro">
+          <h2>Ruang untuk<br />kembali fokus.</h2>
+          <p>Atur target belajar, latih konsentrasi, dan refleksikan progresmu dengan dukungan Guru BK.</p>
+        </div>
+        <img class="auth-photo" src="/assets/focus-library.webp" alt="" width="1440" height="960" fetchpriority="high" />
+      </div>
+    </main>
+  </div>
 
   <!-- workspace:student -->
   <div id="student-app-view" class="app-shell hidden">
     <aside class="sidebar">
       <div>
         <div class="sidebar-header">
-          <img src="/assets/svg/logo-focura.svg" alt="Focura" />
+          <img src="/assets/svg/logo-focura.svg" alt="" />
           <div>
             <strong>Focura</strong>
-            <div style="font-size:0.78rem;color:var(--text-muted);">Ruang Fokus Siswa</div>
+            <span>Ruang Fokus Siswa</span>
           </div>
         </div>
-        <ul id="student-nav" class="nav-list">
-          <li><button class="nav-item active" data-section="beranda">Beranda & Alur</button></li>
-          <li><button class="nav-item" data-section="materi">Materi (Google Drive)</button></li>
-          <li><button class="nav-item" data-section="hambatan">Kenali Hambatan</button></li>
-          <li><button class="nav-item" data-section="tugas">Atur Tugas & Target</button></li>
-          <li><button class="nav-item" data-section="fokus">Mulai Fokus (Timer)</button></li>
-          <li><button class="nav-item" data-section="refleksi">Refleksi Belajar</button></li>
-          <li><button class="nav-item" data-section="progres">Jejak Progres & Excel</button></li>
-          <li><button class="nav-item" data-section="konsultasi">Konsultasi Guru BK</button></li>
-          <li><button class="nav-item" data-section="rpl">Dokumen RPL Klasikal</button></li>
-        </ul>
+        <nav aria-label="Navigasi ruang siswa">
+          <ul id="student-nav" class="nav-list">
+            <li><button class="nav-item active" aria-current="page" data-section="beranda"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#home" /></svg>Beranda &amp; Alur</button></li>
+            <li><button class="nav-item" data-section="materi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book" /></svg>Materi (Google Drive)</button></li>
+            <li><button class="nav-item" data-section="hambatan"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#target" /></svg>Kenali Hambatan</button></li>
+            <li><button class="nav-item" data-section="tugas"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#checklist" /></svg>Atur Tugas &amp; Target</button></li>
+            <li><button class="nav-item" data-section="fokus"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg>Mulai Fokus (Timer)</button></li>
+            <li><button class="nav-item" data-section="refleksi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg>Refleksi Belajar</button></li>
+            <li><button class="nav-item" data-section="progres"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#chart" /></svg>Jejak Progres &amp; Excel</button></li>
+            <li><button class="nav-item" data-section="konsultasi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#message" /></svg>Konsultasi Guru BK</button></li>
+            <li><button class="nav-item" data-section="rpl"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg>Dokumen RPL Klasikal</button></li>
+          </ul>
+        </nav>
       </div>
 
       <button id="btn-student-logout" class="btn btn-outline btn-block">Keluar Akun</button>
@@ -55,50 +77,56 @@
     <main class="main-area">
       <header class="topbar">
         <div>
-          <h2 id="student-greeting">Halo, Siswa!</h2>
-          <p id="student-meta" style="font-size:0.86rem;color:var(--text-muted);"></p>
+          <h1 id="student-greeting">Halo, Siswa!</h1>
+          <p id="student-meta" class="page-description"></p>
         </div>
-        <span id="rpl-progress-badge" class="badge" style="background:var(--primary-light);color:var(--primary-dark);padding:8px 14px;">
-          Ketercapaian Aktivitas RPL: 0/4
-        </span>
+        <div class="student-progress">
+          <label for="rpl-progress-meter" id="rpl-progress-badge">Aktivitas RPL: 0 dari 4</label>
+          <progress id="rpl-progress-meter" max="4" value="0"></progress>
+        </div>
       </header>
 
       <!-- Panel Beranda -->
       <section id="sec-beranda" class="student-panel">
-        <div class="card" style="background:linear-gradient(120deg,#eff6ff,#f0fdfa);margin-bottom:20px;">
-          <h3 style="margin-bottom:6px;">Alur Layanan Bimbingan Klasikal Focura</h3>
-          <p style="font-size:0.92rem;color:var(--text-muted);">
-            1. Baca <strong>Materi</strong> &rarr; 2. Isi <strong>Kenali Hambatan</strong> &rarr; 3. Susun <strong>Atur Tugas</strong> &rarr; 4. Latihan di <strong>Mulai Fokus</strong> &rarr; 5. Tulis <strong>Refleksi Belajar</strong>.
-          </p>
+        <div class="student-intro">
+          <div>
+            <h2>Mulai dari satu langkah kecil.</h2>
+            <p>Ikuti alur bimbingan klasikal untuk membangun kebiasaan belajar yang lebih fokus.</p>
+          </div>
+          <button type="button" class="btn student-intro-action" data-open-section="materi">Buka materi</button>
         </div>
-        <div class="card-grid">
-          <div class="card">
-            <h4>📚 Materi & Tips Fokus</h4>
-            <p style="font-size:0.88rem;color:var(--text-muted);margin:8px 0;">Akses 3 modul pembelajaran konsentrasi belajar langsung dari Google Drive.</p>
-          </div>
-          <div class="card">
-            <h4>⏱️ Latihan Perhatian Terjadwal</h4>
-            <p style="font-size:0.88rem;color:var(--text-muted);margin:8px 0;">Timer fokus interaktif 10 menit, 25 menit, atau 50 menit.</p>
-          </div>
-          <div class="card">
-            <h4>💬 Konsultasi Sukarela Guru BK</h4>
-            <p style="font-size:0.88rem;color:var(--text-muted);margin:8px 0;">Terhubung langsung dengan formulir pendampingan resmi Guru BK.</p>
-          </div>
+        <div class="student-home-grid">
+          <section class="card" aria-labelledby="learning-steps">
+            <h2 id="learning-steps">Alur bimbingan klasikal</h2>
+            <ol class="learning-steps">
+              <li><button type="button" data-open-section="materi"><strong>Baca materi</strong><span>Jelajahi tiga modul konsentrasi belajar.</span></button></li>
+              <li><button type="button" data-open-section="hambatan"><strong>Kenali hambatan</strong><span>Temukan situasi yang sering mengganggu fokusmu.</span></button></li>
+              <li><button type="button" data-open-section="tugas"><strong>Atur tugas dan target</strong><span>Pilih prioritas belajar harianmu.</span></button></li>
+              <li><button type="button" data-open-section="fokus"><strong>Latih fokus</strong><span>Gunakan timer 10, 25, atau 50 menit.</span></button></li>
+              <li><button type="button" data-open-section="refleksi"><strong>Tulis refleksi</strong><span>Catat hal yang ingin kamu perbaiki.</span></button></li>
+            </ol>
+          </section>
+          <section class="card student-support" aria-labelledby="student-support-title">
+            <span class="icon-tile" aria-hidden="true"><svg><use href="/assets/svg/interface.svg#message" /></svg></span>
+            <h2 id="student-support-title">Konsultasi Guru BK</h2>
+            <p>Kamu bisa meminta pendampingan belajar lewat formulir konsultasi sukarela.</p>
+            <button type="button" class="btn btn-outline" data-open-section="konsultasi">Lihat pilihan konsultasi</button>
+          </section>
         </div>
       </section>
 
       <!-- Panel Materi Google Drive -->
       <section id="sec-materi" class="student-panel hidden">
-        <h3 style="margin-bottom:6px;">Modul & Materi Konsentrasi Belajar (Google Drive)</h3>
-        <p style="color:var(--text-muted);margin-bottom:18px;">Klik Pratinjau Modul untuk membaca langsung di dalam aplikasi atau buka di Google Drive.</p>
+        <h2 class="panel-title">Materi konsentrasi belajar</h2>
+        <p class="panel-description">Baca modul di Focura melalui Pratinjau Modul atau buka di Google Drive.</p>
         <div id="drive-modules-grid" class="card-grid"></div>
       </section>
 
       <!-- Panel Kenali Hambatan -->
       <section id="sec-hambatan" class="student-panel hidden">
         <div class="card">
-          <h3 style="margin-bottom:6px;">Kenali Hambatan Belajar (Non-Diagnostik)</h3>
-          <p style="color:var(--text-muted);margin-bottom:16px;">Pilih situasi yang paling sering mengganggu fokus belajarmu saat ini.</p>
+          <h2 class="panel-title">Kenali hambatan belajar</h2>
+          <p class="panel-description">Pilih situasi yang paling sering mengganggu fokusmu. Hasilnya bersifat non-diagnostik.</p>
           <div id="barriers-checklist"></div>
           <button id="btn-save-barriers" class="btn btn-primary">Simpan Hasil Identifikasi</button>
         </div>
@@ -107,15 +135,17 @@
       <!-- Panel Atur Tugas -->
       <section id="sec-tugas" class="student-panel hidden">
         <div class="card">
-          <h3 style="margin-bottom:12px;">Atur Tugas & Target Belajar Harian</h3>
-          <form id="form-add-task" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
-            <input type="text" id="task-title-input" class="form-control" style="flex:2;min-width:220px;" placeholder="Contoh: Mengerjakan latihan soal Matematika Bab 2" required />
-            <select id="task-priority-input" class="form-control" style="flex:1;min-width:140px;">
-              <option value="Tinggi">Prioritas Tinggi</option>
-              <option value="Sedang" selected>Prioritas Sedang</option>
-              <option value="Rendah">Prioritas Rendah</option>
-            </select>
-            <button type="submit" class="btn btn-primary">+ Tambah Target</button>
+          <h2 class="panel-title">Atur tugas &amp; target harian</h2>
+          <form id="form-add-task" class="task-form">
+            <label>Target belajar <input type="text" id="task-title-input" class="form-control" placeholder="Contoh: Latihan soal Matematika Bab 2" required /></label>
+            <label>Prioritas
+              <select id="task-priority-input" class="form-control">
+                <option value="Tinggi">Tinggi</option>
+                <option value="Sedang" selected>Sedang</option>
+                <option value="Rendah">Rendah</option>
+              </select>
+            </label>
+            <button type="submit" class="btn btn-primary">Tambah target</button>
           </form>
           <div id="student-task-list"></div>
         </div>
@@ -123,18 +153,21 @@
 
       <!-- Panel Mulai Fokus -->
       <section id="sec-fokus" class="student-panel hidden">
-        <div class="card" style="text-align:center;max-width:560px;margin:0 auto;">
-          <h3>Mulai Latihan Fokus Terjadwal</h3>
-          <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px;">Jauhkan notifikasi HP selama timer berjalan.</p>
-          <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px;">
-            <button type="button" class="btn btn-outline duration-btn" data-mins="10">10 Menit</button>
-            <button type="button" class="btn btn-outline duration-btn" data-mins="25">25 Menit</button>
-            <button type="button" class="btn btn-outline duration-btn" data-mins="50">50 Menit</button>
+        <div class="card focus-card">
+          <h2 class="panel-title">Latihan fokus</h2>
+          <p class="panel-description">Jauhkan notifikasi HP selama timer berjalan.</p>
+          <div class="focus-options" role="group" aria-label="Durasi latihan fokus">
+            <button type="button" class="btn btn-outline duration-btn" data-mins="10" aria-pressed="true">10 menit</button>
+            <button type="button" class="btn btn-outline duration-btn" data-mins="25" aria-pressed="false">25 menit</button>
+            <button type="button" class="btn btn-outline duration-btn" data-mins="50" aria-pressed="false">50 menit</button>
           </div>
-          <input type="text" id="focus-topic-input" class="form-control" placeholder="Topik yang sedang dipelajari..." style="margin-bottom:10px;" />
-          <div id="timer-display" class="timer-circle">10:00</div>
-          <div style="display:flex;justify-content:center;gap:12px;">
-            <button type="button" id="btn-start-timer" class="btn btn-primary">▶ Mulai Sesi Fokus</button>
+          <div class="form-group focus-topic">
+            <label for="focus-topic-input">Topik belajar</label>
+            <input type="text" id="focus-topic-input" class="form-control" placeholder="Contoh: Membaca bab sistem tata surya" />
+          </div>
+          <div id="timer-display" class="timer-circle" role="timer" aria-label="Waktu tersisa">10:00</div>
+          <div class="focus-options">
+            <button type="button" id="btn-start-timer" class="btn btn-primary">Mulai sesi fokus</button>
             <button type="button" id="btn-reset-timer" class="btn btn-outline">Reset</button>
           </div>
         </div>
@@ -143,7 +176,7 @@
       <!-- Panel Refleksi Belajar -->
       <section id="sec-refleksi" class="student-panel hidden">
         <div class="card" style="margin-bottom:20px;">
-          <h3 style="margin-bottom:12px;">Refleksi Pengalaman Belajar</h3>
+          <h2 class="panel-title">Refleksi pengalaman belajar</h2>
           <form id="form-reflection">
             <div class="form-group">
               <label for="ref-learned">1. Apa yang kamu pelajari hari ini?</label>
@@ -165,27 +198,28 @@
 
       <!-- Panel Jejak Progres & Integrasi Spreadsheet Excel -->
       <section id="sec-progres" class="student-panel hidden">
-        <div class="card-grid">
-          <div class="card"><h2 id="stat-tasks-done">0</h2><p>Tugas Selesai</p></div>
-          <div class="card"><h2 id="stat-focus-count">0</h2><p>Sesi Latihan Fokus</p></div>
-          <div class="card"><h2 id="stat-reflection-count">0</h2><p>Catatan Refleksi</p></div>
-        </div>
+        <h2 class="panel-title">Jejak progres belajar</h2>
+        <dl class="workspace-stats">
+          <div><dt>Tugas selesai</dt><dd id="stat-tasks-done">0</dd></div>
+          <div><dt>Sesi latihan fokus</dt><dd id="stat-focus-count">0</dd></div>
+          <div><dt>Catatan refleksi</dt><dd id="stat-reflection-count">0</dd></div>
+        </dl>
 
         <div class="card" style="margin-bottom:20px;">
-          <h3 style="margin-bottom:14px;">Grafik Aktivitas Belajar Mingguan (Menit Fokus)</h3>
-          <div id="weekly-bar-chart" style="display:flex;gap:12px;align-items:flex-end;"></div>
+          <h3 class="panel-title">Menit fokus minggu ini</h3>
+          <ul id="weekly-bar-chart" class="weekly-chart"></ul>
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:6px;">Sinkronisasi Spreadsheet Excel (.xlsx)</h3>
-          <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:14px;">
+          <h3 class="panel-title">Sinkronisasi Excel</h3>
+          <p class="panel-description">
             Unduh catatan belajarmu ke file Excel (.xlsx), atau impor data tugas dari tab Atur_Tugas.
           </p>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-            <button id="btn-export-student-xlsx" class="btn btn-secondary">📥 Ekspor Data ke Excel (.xlsx)</button>
-            <label class="btn btn-outline" style="cursor:pointer;">
-              📤 Impor dari Excel (.xlsx)
-              <input type="file" id="input-import-student-xlsx" accept=".xlsx,.xls" class="hidden" />
+            <button id="btn-export-student-xlsx" class="btn btn-primary">Ekspor data ke Excel (.xlsx)</button>
+            <label class="btn btn-outline file-button">
+              Impor dari Excel (.xlsx)
+              <input type="file" id="input-import-student-xlsx" accept=".xlsx,.xls" class="visually-hidden" />
             </label>
           </div>
         </div>
@@ -194,16 +228,16 @@
       <!-- Panel Konsultasi Guru BK (Google Form) -->
       <section id="sec-konsultasi" class="student-panel hidden">
         <div class="card">
-          <h3 style="margin-bottom:8px;">Konsultasi Sukarela dengan Guru BK</h3>
-          <p style="color:var(--text-muted);margin-bottom:16px;">
+          <h2 class="panel-title">Konsultasi sukarela dengan Guru BK</h2>
+          <p class="panel-description">
             Membutuhkan pendampingan lebih lanjut terkait hambatan konsentrasi belajar? Sampaikan keluhan atau jadwalkan sesi konseling melalui formulir resmi Guru BK berikut:
           </p>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
             <a href="https://forms.gle/SNFh7o8WdDHCGU8XA" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
-              Buka Formulir Konsultasi Guru BK (Google Form) ↗
+              Buka formulir konsultasi Guru BK
             </a>
           </div>
-          <div style="background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:16px;font-size:0.88rem;">
+          <div class="information-box">
             <strong>Catatan Kerahasiaan:</strong> Layanan konsultasi bersifat sukarela dan seluruh informasi yang Anda sampaikan dijaga kerahasiaannya oleh Guru BK sesuai kode etik profesi BK.
           </div>
         </div>
@@ -231,7 +265,10 @@
     </aside>
     <main class="workspace-main">
       <header class="workspace-header">
-        <h1 id="monitor-title"></h1>
+        <div>
+          <h1 id="monitor-title"></h1>
+          <p id="monitor-description" class="page-description"></p>
+        </div>
         <div id="monitor-actions" class="workspace-actions"></div>
       </header>
       <p id="monitor-feedback" class="workspace-feedback" role="status"></p>
@@ -243,29 +280,25 @@
   <div id="guardian-app-view" class="app-shell hidden">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <img src="/assets/svg/logo-focura.svg" alt="Focura" />
-        <div><strong>Focura</strong><div style="font-size:0.78rem;color:var(--text-muted);">Ruang Orang Tua/Wali</div></div>
+        <img src="/assets/svg/logo-focura.svg" alt="" />
+        <div><strong>Focura</strong><span>Ruang Orang Tua/Wali</span></div>
       </div>
       <button id="btn-guardian-logout" class="btn btn-outline btn-block">Keluar Akun</button>
     </aside>
     <main class="main-area">
-      <header class="topbar"><h2>Informasi Anak</h2></header>
+      <header class="topbar"><div><h1>Informasi anak</h1><p class="page-description">Lihat sekolah dan kelas anak yang terhubung dengan akunmu.</p></div></header>
       <div id="guardian-children" class="card-grid"></div>
     </main>
   </div>
 
   <!-- Modal Pratinjau Modul Google Drive -->
-  <div id="drive-preview-modal" class="modal-backdrop hidden">
-    <div class="modal-box">
-      <div class="modal-header">
-        <strong id="modal-drive-title">Pratinjau Modul</strong>
-        <button id="btn-close-modal" class="btn btn-outline" style="padding:6px 12px;">Tutup ✕</button>
-      </div>
-      <div class="modal-body" style="padding:0;">
-        <iframe id="modal-drive-iframe" style="width:100%;height:72vh;border:none;" title="Pratinjau Dokumen Google Drive"></iframe>
-      </div>
+  <dialog id="drive-preview-modal" class="modal-box" aria-labelledby="modal-drive-title">
+    <div class="modal-header">
+      <h2 id="modal-drive-title">Pratinjau modul</h2>
+      <form method="dialog"><button class="btn btn-outline" autofocus>Tutup</button></form>
     </div>
-  </div>
+    <iframe id="modal-drive-iframe" class="modal-preview" title="Pratinjau dokumen Google Drive"></iframe>
+  </dialog>
 
 </body>
 </html>

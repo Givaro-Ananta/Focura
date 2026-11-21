@@ -19,9 +19,10 @@ export function createDemoStore() {
     Kelas: [{ id: "bl-xi", schoolId: "sma-bl", name: "XI" }, { id: "tp-xi", schoolId: "sma-tp", name: "XI" }],
     TautanWali: [], Sesi: [], Belajar: [],
   };
-  const allowed = [demoProfile.email, ...tables.Akun.map((account) => account.email)];
+  const allowed = new Set([demoProfile.email, ...tables.Akun.map((account) => account.email)]);
   return {
     async emails() { return new Set(allowed); },
+    async addEmail(email) { allowed.add(email); },
     async read(...names) {
       return Object.fromEntries(names.map((name) => [name, structuredClone(tables[name])]));
     },

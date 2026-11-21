@@ -6,6 +6,7 @@ const PRIORITIES = ["Tinggi", "Sedang", "Rendah"];
 const BARRIERS = ["hp", "waktu", "bosan", "materi", "tunda"];
 const timezone = "Asia/Jakarta";
 const errorKind = Symbol.for("focura.requestError");
+const schoolRole = (role) => role === "bk" || role === "student";
 
 export class AppError extends Error {
   constructor(status, message) {
@@ -32,8 +33,18 @@ function text(value, limit, required = true) {
   return value.trim();
 }
 
-function publicAccount({ id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt }) {
-  return { id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt };
+function validEmail(email) {
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+$/.test(email);
+}
+
+function googleEmail(profile) {
+  const email = emailAddress(profile?.email);
+  requireValue(profile?.email_verified === true && validEmail(email) && profile.sub, "Email Google belum terverifikasi.", 403);
+  return email;
+}
+
+function publicAccount({ id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt, registrationPending }) {
+  return { id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt, registrationPending };
 }
 
 function liveSession(session, now) {
@@ -81,6 +92,7 @@ function studySummary(records) {
 
 export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
   let pendingWrite = Promise.resolve();
+  const master = emailAddress(masterEmail);
 
   function serialize(operation) {
     const result = pendingWrite.then(operation);
@@ -89,18 +101,19 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
   }
 
   async function loginAccount(profile) {
-    const email = emailAddress(profile?.email);
-    requireValue(profile?.email_verified === true && email && profile.sub, "Email Google belum terverifikasi.", 403);
+    const email = googleEmail(profile);
     const [allowed, { Akun }] = await Promise.all([store.emails(), store.read("Akun")]);
-    requireValue(allowed.has(email), "Email belum diizinkan Master Admin.", 403);
     const account = Akun.find((entry) => entry.email === email);
     const linked = Akun.find((entry) => entry.googleSub === profile.sub);
     requireValue(!linked || linked.id === account?.id, "Hubungi Master Admin untuk memperbarui email akun.", 403);
-    if (!account && email === emailAddress(masterEmail)) {
+    requireValue(!account?.googleSub || account.googleSub === profile.sub, "Akses akun tidak tersedia.", 403);
+    requireValue(!account?.registrationPending, "Pendaftaran Guru BK menunggu persetujuan Admin Central.", 409);
+    requireValue(allowed.has(email), "Email belum diizinkan Master Admin.", 403);
+    if (!account && email === master) {
       return { id: randomUUID(), email, role: "admin", enabled: true, fullName: profile.name || email };
     }
-    requireValue(account && ROLES.includes(account.role) && (!["bk", "student"].includes(account.role) || account.schoolId), "Peran atau penugasan akun belum lengkap.", 403);
-    requireValue(account.enabled && (!account.googleSub || account.googleSub === profile.sub), "Akses akun tidak tersedia.", 403);
+    requireValue(account && ROLES.includes(account.role) && (!schoolRole(account.role) || account.schoolId), "Peran atau penugasan akun belum lengkap.", 403);
+    requireValue(account.enabled, "Akses akun tidak tersedia.", 403);
     return account;
   }
 
@@ -109,7 +122,8 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     const [emails, { Akun, Sesi }] = await Promise.all([store.emails(), store.read("Akun", "Sesi")]);
     const session = Sesi.find((entry) => entry.id === sessionId);
     const actor = session && Akun.find((account) => account.id === session.accountId);
-    requireValue(actor?.enabled && emails.has(actor.email) && liveSession(session, now()), "Sesi sudah berakhir atau akses akun dinonaktifkan.", 401);
+    requireValue(actor?.enabled && !actor.registrationPending && (!schoolRole(actor.role) || actor.schoolId) &&
+      emails.has(actor.email) && liveSession(session, now()), "Sesi sudah berakhir atau akses akun dinonaktifkan.", 401);
     return { actor: publicAccount(actor), emails, accounts: Akun, sessions: Sesi };
   }
 
@@ -136,7 +150,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     const active = new Set(sessions.filter((session) => liveSession(session, now())).map((session) => session.accountId));
     const schools = Sekolah.filter((school) => !scope || school.id === scope);
     if (scope) requireValue(schools.length, "Sekolah tidak ditemukan.", 404);
-    const members = accounts.filter((entry) => (!scope || entry.schoolId === scope) && (entry.role === "student" || (central && entry.role === "bk")));
+    const members = accounts.filter((entry) => !entry.registrationPending && (!scope || entry.schoolId === scope) && (entry.role === "student" || (central && entry.role === "bk")));
     const names = new Map(Sekolah.map(({ id, name }) => [id, name]));
     const classes = new Map(Kelas.map(({ id, name }) => [id, name]));
     const isActive = (entry) => entry.enabled && emails.has(entry.email) && active.has(entry.id);
@@ -194,10 +208,27 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       const { Sekolah, Kelas = [] } = await store.read("Sekolah", ...(page === "sekolah" ? ["Kelas"] : []));
       const schools = Sekolah.map(({ id, name }) => ({ id, name }));
       if (page === "sekolah") return { schools, classes: Kelas.map(({ id, name, schoolId }) => ({ id, name, schoolId })) };
-      const accounts = access.accounts.map(publicAccount);
+      const accounts = access.accounts.map((account) => ({ ...publicAccount(account), emailAllowed: access.emails.has(account.email) }));
       const existing = new Set(accounts.map(({ email }) => email));
       const pendingEmails = [...access.emails].filter((email) => !existing.has(email));
       return { schools, accounts, pendingEmails };
+    },
+
+    registerTeacher(profile) {
+      return serialize(async () => {
+        const email = googleEmail(profile);
+        requireValue(email !== master, "Email Master Admin tidak dapat digunakan untuk pendaftaran Guru BK.", 403);
+        const { Akun } = await store.read("Akun");
+        const account = Akun.find((entry) => entry.email === email);
+        requireValue(!Akun.some((entry) => entry.googleSub === profile.sub && entry.email !== email) &&
+          (!account?.googleSub || account.googleSub === profile.sub), "Akses akun tidak tersedia.", 403);
+        if (account) return account.registrationPending === true;
+        const name = typeof profile.name === "string" ? profile.name.trim() : "";
+        const fullName = (name || email).slice(0, 120);
+        await store.write([["Akun", { id: randomUUID(), email, fullName, role: "bk", googleSub: profile.sub,
+          schoolId: null, enabled: false, registrationPending: true }]]);
+        return true;
+      });
     },
 
     startSession(profile) {
@@ -253,20 +284,26 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         const previous = Akun.find((entry) => entry.id === id);
         requireValue(!id || previous, "Akun tidak ditemukan.", 404);
         const email = previous?.email || emailAddress(input.email);
-        requireValue(previous || emails.has(email), "Tambahkan email di spreadsheet terlebih dahulu.");
+        requireValue(validEmail(email), "Masukkan alamat email Google yang valid.");
+        requireValue(previous || email !== master, "Akun Master Admin dibuat melalui login Google.", 403);
         requireValue(!Akun.some((entry) => entry.id !== id && entry.email === email), "Profil email sudah ada.", 409);
         const fullName = text(input.fullName ?? previous?.fullName, 120);
         const role = input.role ?? previous?.role;
         requireValue(ROLES.includes(role), "Peran tidak valid.");
-        const schoolId = ["bk", "student"].includes(role) ? input.schoolId ?? previous?.schoolId : null;
+        requireValue(previous || schoolRole(role) || emails.has(email), "Tambahkan email di spreadsheet untuk peran ini.");
+        requireValue(!previous?.registrationPending || role === "bk", "Pendaftaran mandiri hanya untuk Guru BK.");
+        const schoolId = schoolRole(role) ? input.schoolId ?? previous?.schoolId : null;
         requireValue(schoolId === null || Sekolah.some((entry) => entry.id === schoolId), "Pilih sekolah yang valid.");
-        requireValue(!["bk", "student"].includes(role) || schoolId, "Guru BK dan siswa memerlukan sekolah.");
+        requireValue(!schoolRole(role) || schoolId, "Guru BK dan siswa memerlukan sekolah.");
         const nis = role === "student" ? text(input.nis ?? previous?.nis ?? "", 60, false) : "";
         requireValue(!nis || !Akun.some((entry) => entry.id !== id && entry.role === "student" && entry.schoolId === schoolId && entry.nis === nis), "NIS sudah digunakan di sekolah ini.", 409);
         const enabled = input.enabled ?? previous?.enabled ?? true;
         requireValue(typeof enabled === "boolean", "Status izin login tidak valid.");
         const classId = role === "student" && previous?.schoolId === schoolId ? previous?.classId || null : null;
         const account = { ...previous, id: id || randomUUID(), email, fullName, role, schoolId, classId, nis, enabled };
+        if (previous?.registrationPending && enabled) account.registrationPending = false;
+        // Izin email saja belum memberi akses jika penyimpanan profil gagal.
+        if (!emails.has(email) && (!previous || (previous.registrationPending && enabled))) await store.addEmail(email);
         await store.write([["Akun", account], ...(!enabled && id ? revoke(Sesi, id) : [])]);
       });
     },

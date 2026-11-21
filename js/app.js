@@ -17,43 +17,65 @@ let selectedDurationMinutes = 10;
 
 export async function initializeApp() {
   const button = document.getElementById("btn-google-login");
+  const buttonLabel = document.getElementById("auth-button-label");
+  const register = document.getElementById("btn-teacher-register");
+  const registerLabel = register.textContent;
   const { demo: demoFlag, workspace, section } = document.getElementById("focura").dataset;
   const demo = demoFlag === "true";
   const authView = document.getElementById("auth-view");
   const loading = document.getElementById("workspace-loading");
+  const loginLabel = demo ? "Masuk sebagai Admin Demo" : "Masuk dengan Google";
   function showLogin() {
     loading?.remove();
     document.getElementById("admin-app-view")?.classList.add("hidden");
     authView.classList.remove("hidden");
     authView.classList.add("is-visible");
+    buttonLabel.textContent = loginLabel;
+    register.textContent = registerLabel;
     button.disabled = false;
+    register.disabled = false;
   }
   if (demo) {
-    button.textContent = "Masuk sebagai Admin Demo";
     document.getElementById("auth-help").textContent = "Mode demo menggunakan data contoh.";
+  } else {
+    document.getElementById("teacher-registration").classList.remove("hidden");
   }
-  button.onclick = async () => {
+  async function connect(registering = false) {
     button.disabled = true;
+    register.disabled = true;
+    (registering ? register : buttonLabel).textContent = "Menghubungkan…";
+    showAuthAlert("");
+    document.getElementById("auth-status").textContent = "";
     try {
-      const destination = workspace ? pagePath(workspace, section) + window.location.search : demo ? "/admin" : "/";
+      const destination = registering ? "/?daftar=guru-bk"
+        : workspace ? pagePath(workspace, section) + window.location.search : demo ? "/admin" : "/";
       await loginUser(demo ? "demo" : "google", destination);
     } catch {
-      showAuthAlert("Login gagal dimulai. Silakan coba lagi.");
+      showAuthAlert(registering ? "Pendaftaran gagal dimulai. Silakan coba lagi." : "Login gagal dimulai. Silakan coba lagi.");
       showLogin();
     }
-  };
+  }
+  button.onclick = () => connect();
+  register.onclick = () => connect(true);
 
   try {
     const user = await getActiveSession();
     if (!user) {
       showLogin();
-      const error = new URLSearchParams(window.location.search).get("error");
+      const query = new URLSearchParams(window.location.search);
+      const error = query.get("error");
       if (error) showAuthAlert({
         AccessDenied: "Email ini belum diizinkan. Hubungi Admin Central.",
         AccessIncomplete: "Peran atau penugasan akun belum lengkap. Hubungi Admin Central.",
         SessionExpired: "Sesi telah berakhir. Masuk kembali untuk melanjutkan.",
-        ServiceUnavailable: "Daftar akses sementara tidak dapat diperiksa. Silakan coba lagi.",
+        RegistrationDenied: "Pendaftaran Guru BK tidak dapat diproses. Periksa akun Google atau hubungi Admin Central.",
+        ServiceUnavailable: "Layanan akun sementara tidak tersedia. Silakan coba lagi.",
       }[error] || "Login tidak dapat diselesaikan. Silakan coba lagi.");
+      if (query.get("pendaftaran") === "tertunda") {
+        document.getElementById("auth-status").textContent = "Pendaftaran Guru BK menunggu persetujuan Admin Central. Masuk kembali setelah akun diaktifkan.";
+      } else if (query.get("pendaftaran") === "akun-ada") {
+        document.getElementById("auth-status").textContent = "Akun ini sudah terdaftar. Gunakan Masuk dengan Google atau hubungi Admin Central jika perlu bantuan.";
+      }
       return;
     }
     const userWorkspace = Object.keys(WORKSPACES).find((name) => WORKSPACES[name].role === user.role);
@@ -69,9 +91,11 @@ export async function initializeApp() {
       const children = await api("guardian/children");
       const container = document.getElementById("guardian-children");
       container.innerHTML = children.length ? children.map((child) =>
-        '<article class="card"><h3>' + escapeHtml(child.fullName) + '</h3><p>' +
-        escapeHtml(child.school) + ' · ' + escapeHtml(child.kelas) + '</p></article>'
-      ).join("") : '<p>Belum ada akun anak yang ditautkan.</p>';
+        `<article class="card guardian-card">
+          <span class="icon-tile" aria-hidden="true"><svg><use href="/assets/svg/interface.svg#user" /></svg></span>
+          <h2>${escapeHtml(child.fullName)}</h2><p>${escapeHtml(child.school)} · ${escapeHtml(child.kelas)}</p>
+        </article>`
+      ).join("") : '<p class="workspace-empty">Belum ada akun anak yang ditautkan. Hubungi Admin Central untuk menautkan akun.</p>';
       document.getElementById("btn-guardian-logout").onclick = leave;
       document.getElementById("guardian-app-view").classList.remove("hidden");
     } else {
@@ -94,10 +118,7 @@ function leave() {
 }
 
 function showAuthAlert(message) {
-  const box = document.getElementById("auth-alert");
-  box.classList.remove("hidden");
-  box.style.cssText = "background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:0.86rem;";
-  box.textContent = message;
+  document.getElementById("auth-alert").textContent = message;
 }
 
 async function saveLearning(action, values) {
@@ -120,12 +141,16 @@ function renderStudentDashboard(user) {
   document.getElementById("student-meta").textContent = `NIS: ${user.nis || "—"} • ${user.kelas}`;
 
   // Navigasi Menu Siswa
-  const navButtons = document.querySelectorAll("#student-nav .nav-item");
-  navButtons.forEach((btn) => {
+  document.querySelectorAll("#student-nav .nav-item").forEach((btn) => {
+    btn.onclick = () => switchStudentSection(btn.dataset.section);
+  });
+  document.querySelectorAll("[data-open-section]").forEach((btn) => {
     btn.onclick = () => {
-      navButtons.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      switchStudentSection(btn.dataset.section);
+      const section = btn.dataset.openSection;
+      switchStudentSection(section);
+      const heading = document.querySelector(`#sec-${section} h2`);
+      heading.tabIndex = -1;
+      heading.focus();
     };
   });
 
@@ -150,13 +175,18 @@ function renderStudentDashboard(user) {
   setupTaskManager();
   setupBarriersChecklist();
   setupReflectionForm();
-  refreshStudentPanels();
   switchStudentSection("beranda");
 }
 
 function switchStudentSection(sectionId) {
   document.querySelectorAll(".student-panel").forEach((panel) => {
     panel.classList.toggle("hidden", panel.id !== `sec-${sectionId}`);
+  });
+  document.querySelectorAll("#student-nav .nav-item").forEach((btn) => {
+    const active = btn.dataset.section === sectionId;
+    btn.classList.toggle("active", active);
+    if (active) btn.setAttribute("aria-current", "page");
+    else btn.removeAttribute("aria-current");
   });
   refreshStudentPanels();
 }
@@ -176,7 +206,8 @@ function refreshStudentPanels() {
     (data.tasks.length > 0 ? 1 : 0) +
     (data.focusSessions.length > 0 ? 1 : 0) +
     (data.reflections.length > 0 ? 1 : 0);
-  document.getElementById("rpl-progress-badge").textContent = `Ketercapaian Aktivitas RPL: ${criteriaDone}/4`;
+  document.getElementById("rpl-progress-badge").textContent = `Aktivitas RPL: ${criteriaDone} dari 4`;
+  document.getElementById("rpl-progress-meter").value = criteriaDone;
 
   // Render Daftar Tugas
   const taskListEl = document.getElementById("student-task-list");
@@ -184,8 +215,8 @@ function refreshStudentPanels() {
     ? data.tasks
         .map(
           (t) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:${t.completed ? "#f8fafc" : "#fff"};">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:${t.completed ? "line-through" : "none"};">
+      <div class="task-row${t.completed ? " is-complete" : ""}">
+        <label>
           <input type="checkbox" data-task-id="${escapeHtml(t.id)}" ${t.completed ? "checked" : ""}/>
           <span>${escapeHtml(t.title)}</span>
         </label>
@@ -193,12 +224,13 @@ function refreshStudentPanels() {
       </div>`
         )
         .join("")
-    : `<p style="color:var(--text-muted);font-size:0.9rem;">Belum ada target belajar. Tambahkan tugas pertamamu di atas.</p>`;
+    : `<p class="workspace-empty">Belum ada target belajar. Tambahkan tugas pertamamu di atas.</p>`;
 
   taskListEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
     cb.onchange = async () => {
       cb.disabled = true;
       await saveLearning("toggleTask", { id: cb.dataset.taskId });
+      taskListEl.querySelector(`[data-task-id="${CSS.escape(cb.dataset.taskId)}"]`)?.focus();
     };
   });
 
@@ -216,7 +248,7 @@ function refreshStudentPanels() {
       </div>`
         )
         .join("")
-    : `<p style="color:var(--text-muted);font-size:0.9rem;">Belum ada catatan refleksi tersimpan.</p>`;
+    : `<p class="workspace-empty">Belum ada catatan refleksi. Isi formulir di atas untuk menulis refleksi pertamamu.</p>`;
 
   // Render Grafik Batang Aktivitas Mingguan
   const chartEl = document.getElementById("weekly-bar-chart");
@@ -227,13 +259,13 @@ function refreshStudentPanels() {
       const mins = data.weeklyMinutes[day] || 0;
       const pct = Math.round((mins / maxVal) * 100);
       return `
-      <div style="flex:1;text-align:center;">
-        <div style="height:120px;display:flex;align-items:flex-end;justify-content:center;background:#f1f5f9;border-radius:8px;padding:4px;">
-          <div style="width:70%;height:${Math.max(8, pct)}%;background:var(--primary);border-radius:6px;" title="${mins} menit"></div>
+      <li>
+        <div class="chart-track" aria-hidden="true">
+          <div class="chart-bar" style="height:${pct}%"></div>
         </div>
-        <div style="font-size:0.78rem;font-weight:700;margin-top:6px;">${day}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);">${mins}m</div>
-      </div>`;
+        <strong>${day}</strong>
+        <span>${mins} <span class="visually-hidden">menit</span><span aria-hidden="true">m</span></span>
+      </li>`;
     })
     .join("");
 }
@@ -256,10 +288,12 @@ function setupFocusTimer() {
     display.textContent = `${m}:${s}`;
   };
 
-  document.querySelectorAll(".duration-btn").forEach((btn) => {
+  const durationButtons = document.querySelectorAll(".duration-btn");
+  durationButtons.forEach((btn) => {
     btn.onclick = () => {
       clearInterval(timerInterval);
       selectedDurationMinutes = Number(btn.dataset.mins);
+      durationButtons.forEach((option) => option.setAttribute("aria-pressed", String(option === btn)));
       remainingSeconds = selectedDurationMinutes * 60;
       updateDisplay();
     };
@@ -298,12 +332,9 @@ function setupBarriersChecklist() {
   container.innerHTML = APP_CONFIG.barriersList
     .map(
       (b) => `
-    <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;cursor:pointer;">
-      <input type="checkbox" value="${b.id}" ${data.selectedBarriers.includes(b.id) ? "checked" : ""} style="margin-top:4px;"/>
-      <div>
-        <div style="font-weight:600;">${b.label}</div>
-        <div style="font-size:0.84rem;color:var(--text-muted);margin-top:3px;">Saran Strategi: ${b.tip}</div>
-      </div>
+    <label class="barrier-option">
+      <input type="checkbox" value="${b.id}" ${data.selectedBarriers.includes(b.id) ? "checked" : ""}/>
+      <span><strong>${b.label}</strong><span>${b.tip}</span></span>
     </label>`
     )
     .join("");
@@ -343,7 +374,7 @@ function renderDriveModules() {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary btn-preview-drive" data-url="${mod.previewUrl}" data-title="${mod.title}">Pratinjau Modul</button>
-        <a class="btn btn-outline" href="${mod.editUrl}" target="_blank" rel="noopener noreferrer">Buka Google Drive ↗</a>
+        <a class="btn btn-outline" href="${mod.editUrl}" target="_blank" rel="noopener noreferrer">Buka Google Drive</a>
       </div>
     </div>`
     )
@@ -356,13 +387,11 @@ function renderDriveModules() {
 
 function openDriveModal(title, previewUrl) {
   const modal = document.getElementById("drive-preview-modal");
+  const iframe = document.getElementById("modal-drive-iframe");
   document.getElementById("modal-drive-title").textContent = title;
-  document.getElementById("modal-drive-iframe").src = previewUrl;
-  modal.classList.remove("hidden");
-  document.getElementById("btn-close-modal").onclick = () => {
-    modal.classList.add("hidden");
-    document.getElementById("modal-drive-iframe").src = "";
-  };
+  iframe.src = previewUrl;
+  modal.addEventListener("close", () => iframe.removeAttribute("src"), { once: true });
+  modal.showModal();
 }
 
 function renderRPLSection(containerId) {
@@ -372,17 +401,17 @@ function renderRPLSection(containerId) {
 
   container.innerHTML = `
     <div class="card" style="margin-bottom:20px;">
-      <h3 style="color:var(--primary-dark);margin-bottom:12px;">${rpl.judul}</h3>
+      <h2 class="panel-title rpl-title">${rpl.judul}</h2>
       <div class="table-responsive" style="margin-bottom:16px;">
         <table>
           <tbody>
-            ${rpl.identitas.map(([k, v]) => `<tr><th style="width:240px;">${k}</th><td>${v}</td></tr>`).join("")}
+            ${rpl.identitas.map(([k, v]) => `<tr><th scope="row">${k}</th><td>${v}</td></tr>`).join("")}
           </tbody>
         </table>
       </div>
       <p style="margin-bottom:10px;"><strong>A. Rasional Layanan:</strong> ${rpl.rasional}</p>
       <p style="margin-bottom:16px;"><strong>B. Tujuan Umum:</strong> ${rpl.tujuanUmum}</p>
-      <h4 style="margin-bottom:10px;">C. Langkah Pelaksanaan Layanan Klasikal (2 × 45 Menit)</h4>
+      <h3 class="panel-title">C. Langkah Pelaksanaan Layanan Klasikal (2 × 45 Menit)</h3>
       <div class="table-responsive">
         <table>
           <thead><tr><th>Tahap Kegiatan</th><th>Deskripsi Pelaksanaan di Website FOCURA</th></tr></thead>

@@ -13,7 +13,7 @@ export const focura = globalThis[key] ??= createFocura(demoEnabled ? createDemoS
   masterEmail: demoEnabled ? demoProfile.email : process.env.FOCURA_MASTER_EMAIL,
 });
 
-export const authOptions = {
+const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: demoEnabled
     ? [credentialsProvider({ id: "demo", name: demoProfile.name, credentials: {},
@@ -22,17 +22,6 @@ export const authOptions = {
   pages: { signIn: "/", error: "/" },
   session: { strategy: "jwt", maxAge: SESSION_AGE },
   callbacks: {
-    async signIn({ account, profile }) {
-      if (account?.provider !== (demoEnabled ? "demo" : "google")) return false;
-      try {
-        account.focuraSessionId = await focura.startSession(demoEnabled ? demoProfile : profile);
-        return true;
-      } catch (error) {
-        if (isAppError(error)) return error.message.includes("belum lengkap") ? "/?error=AccessIncomplete" : false;
-        console.error("Pemeriksaan akses Google gagal.", error.code || error.name);
-        return "/?error=ServiceUnavailable";
-      }
-    },
     async jwt({ token, account }) {
       return account ? { focuraSessionId: account.focuraSessionId } : token;
     },
@@ -52,3 +41,39 @@ export const authOptions = {
     },
   },
 };
+
+export function createAuthOptions() {
+  // NextAuth resolves the sign-in destination before invoking signIn, including on the Google callback.
+  let registerTeacher = false;
+  return {
+    ...authOptions,
+    callbacks: {
+      ...authOptions.callbacks,
+      redirect({ url, baseUrl }) {
+        const target = URL.canParse(url, baseUrl) ? new URL(url, baseUrl) : null;
+        const local = target?.origin === baseUrl;
+        registerTeacher = !demoEnabled && local && target.pathname === "/" && target.searchParams.get("daftar") === "guru-bk";
+        return local ? target.href : baseUrl;
+      },
+      async signIn({ account, profile }) {
+        if (account?.provider !== (demoEnabled ? "demo" : "google")) return false;
+        try {
+          if (registerTeacher) {
+            const pending = await focura.registerTeacher(profile);
+            return pending ? "/?pendaftaran=tertunda" : "/?pendaftaran=akun-ada";
+          }
+          account.focuraSessionId = await focura.startSession(demoEnabled ? demoProfile : profile);
+          return true;
+        } catch (error) {
+          if (isAppError(error)) {
+            if (registerTeacher) return "/?error=RegistrationDenied";
+            if (error.status === 409) return "/?pendaftaran=tertunda";
+            return error.message.includes("belum lengkap") ? "/?error=AccessIncomplete" : false;
+          }
+          console.error("Pemeriksaan akses Google gagal.", error.code || error.name);
+          return "/?error=ServiceUnavailable";
+        }
+      },
+    },
+  };
+}
