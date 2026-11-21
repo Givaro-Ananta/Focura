@@ -14,7 +14,10 @@ export function getStudentData() {
 }
 
 export function updateStudentData(action, values) {
-  const result = write.then(async () => { data = await api("me/learning", "POST", { action, ...values }); });
+  const result = write.then(async () => {
+    data = await api("me/learning", "POST", { action, ...values });
+    return data;
+  });
   write = result.catch(() => {});
   return result;
 }

@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { APP_CONFIG } from "../js/config.js";
+import { driveLinks, JAKARTA, PRIORITIES, rplActivityCount, SURVEY_ITEMS } from "../js/learning-rules.js";
 
 export const SESSION_AGE = 8 * 60 * 60;
 const ROLES = ["admin", "bk", "student", "guardian"];
-const PRIORITIES = ["Tinggi", "Sedang", "Rendah"];
-const BARRIERS = ["hp", "waktu", "bosan", "materi", "tunda"];
-const timezone = "Asia/Jakarta";
+const BARRIERS = APP_CONFIG.barriersList.map(({ id }) => id);
+const dayKey = new Intl.DateTimeFormat("sv-SE", { timeZone: JAKARTA });
 const errorKind = Symbol.for("focura.requestError");
 const schoolRole = (role) => role === "bk" || role === "student";
 
@@ -51,43 +52,153 @@ function liveSession(session, now) {
   return !session.revokedAt && session.expiresAt > now;
 }
 
-function learningData(records) {
-  const newestFirst = (kind) => records.filter((record) => record.kind === kind)
+function learningData(records, time) {
+  const newestFirst = (kind) => records.filter((record) => record.kind === kind && !record.deleted)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const focusSessions = newestFirst("focus").map(({ id, durationMinutes, topic, createdAt }) => ({
-    id, durationMinutes, topic,
-    completedAt: new Date(createdAt).toLocaleString("id-ID", { timeZone: timezone }),
-    day: new Date(createdAt).toLocaleDateString("id-ID", { weekday: "short", timeZone: timezone }),
+  const focus = newestFirst("focus");
+  const tasks = newestFirst("task");
+  const reflections = newestFirst("reflection");
+  const activity = Array.from({ length: 7 }, (_, index) => ({
+    date: dayKey.format(time - (6 - index) * 86_400_000), minutes: 0, sessions: 0, doneTasks: 0, active: false,
   }));
+  const days = new Map(activity.map((day) => [day.date, day]));
+  for (const record of [...focus, ...tasks, ...reflections, ...newestFirst("barriers")]) {
+    for (const at of [record.createdAt, record.updatedAt].filter(Boolean)) {
+      const day = days.get(dayKey.format(Date.parse(at)));
+      if (day) day.active = true;
+    }
+  }
+  for (const record of tasks.filter((task) => task.completed && task.completedAt)) {
+    const day = days.get(dayKey.format(Date.parse(record.completedAt)));
+    if (day) {
+      day.doneTasks++;
+      day.active = true;
+    }
+  }
   const weeklyMinutes = {};
+  const focusSessions = focus.map(({ id, durationMinutes, topic, createdAt }) => ({
+    id, durationMinutes, topic,
+    completedAt: new Date(createdAt).toLocaleString("id-ID", { timeZone: JAKARTA }),
+    day: new Date(createdAt).toLocaleDateString("id-ID", { weekday: "short", timeZone: JAKARTA }),
+  }));
   for (const session of focusSessions) {
     weeklyMinutes[session.day] = (weeklyMinutes[session.day] || 0) + session.durationMinutes;
   }
-  return {
-    tasks: newestFirst("task").map(({ id, title, priority, completed, createdAt, sourceDate }) => ({
-      id, title, priority, completed, createdAt: sourceDate || new Date(createdAt).toLocaleDateString("id-ID", { timeZone: timezone }),
+  for (const session of focus) {
+    const day = days.get(dayKey.format(Date.parse(session.createdAt)));
+    if (day) {
+      day.minutes += session.durationMinutes;
+      day.sessions++;
+    }
+  }
+  const timer = records.find((record) => record.kind === "focusTimer");
+  const result = {
+    tasks: tasks.map(({ id, title, priority, completed, createdAt, sourceDate }) => ({
+      id, title, priority, completed, createdAt: sourceDate || new Date(createdAt).toLocaleDateString("id-ID", { timeZone: JAKARTA }),
     })),
     focusSessions,
-    reflections: newestFirst("reflection").map(({ id, learned, feeling, improvement, createdAt }) => ({
-      id, learned, feeling, improvement, date: new Date(createdAt).toLocaleString("id-ID", { timeZone: timezone }),
+    reflections: reflections.map(({ id, learned, feeling, improvement, createdAt }) => ({
+      id, learned, feeling, improvement, date: new Date(createdAt).toLocaleString("id-ID", { timeZone: JAKARTA }),
     })),
     selectedBarriers: records.find((record) => record.kind === "barriers")?.selectedBarriers || [],
     weeklyMinutes,
+    activity,
+    timer: timer ? {
+      id: timer.id, topic: timer.topic, taskId: timer.taskId, durationMinutes: timer.durationMinutes,
+      deadline: timer.deadline, remainingMs: timer.remainingMs, version: timer.version, serverNow: time,
+    } : null,
   };
+  return { ...result, rplCount: rplActivityCount(result) };
 }
 
 function studySummary(records) {
-  const tasks = records.filter((entry) => entry.kind === "task");
-  const focusCount = records.filter((entry) => entry.kind === "focus").length;
-  const reflectionCount = records.filter((entry) => entry.kind === "reflection").length;
-  const barriers = records.find((entry) => entry.kind === "barriers")?.selectedBarriers.length;
+  const tasks = records.filter((entry) => entry.kind === "task" && !entry.deleted);
+  const focusSessions = records.filter((entry) => entry.kind === "focus");
+  const reflections = records.filter((entry) => entry.kind === "reflection");
+  const selectedBarriers = records.find((entry) => entry.kind === "barriers")?.selectedBarriers || [];
   return {
     tasks: tasks.length,
     doneTasks: tasks.filter((entry) => entry.completed).length,
-    focusCount,
-    reflectionCount,
-    rplCount: [barriers, tasks.length, focusCount, reflectionCount].filter(Boolean).length,
+    focusCount: focusSessions.length,
+    reflectionCount: reflections.length,
+    rplCount: rplActivityCount({ tasks, focusSessions, reflections, selectedBarriers }),
   };
+}
+
+function schoolModules(records, schoolId) {
+  const scoped = records.filter((record) => record.schoolId === schoolId);
+  const modules = new Map(APP_CONFIG.driveModules.map((record) => [record.id, record]));
+  for (const record of scoped) modules.set(record.moduleId, record);
+  return [...modules.values()].flatMap(({ id, moduleId, title, category, description, editUrl, deleted }) => {
+    const links = driveLinks(editUrl);
+    return !deleted && links ? [{ id: moduleId || id, title, category, description, ...links }] : [];
+  });
+}
+
+function importRows(rows, seen, parse, key) {
+  requireValue(Array.isArray(rows) && rows.length > 0 && rows.length <= 500, "Impor harus berisi 1–500 baris.");
+  const report = { imported: 0, duplicates: 0, failed: 0, errors: [] };
+  const records = [];
+  rows.forEach((row, index) => {
+    const number = Number.isSafeInteger(row?.row) && row.row >= 2 ? row.row : index + 2;
+    try {
+      requireValue(row && typeof row === "object" && !Array.isArray(row), "Struktur baris tidak valid.");
+      const record = parse(row);
+      const identity = key(record);
+      if (seen.has(identity)) {
+        report.duplicates++;
+        return;
+      }
+      seen.add(identity);
+      records.push(record);
+      report.imported++;
+    } catch (error) {
+      if (!isAppError(error)) throw error;
+      report.failed++;
+      report.errors.push({ row: number, message: error.message });
+    }
+  });
+  return { records, report };
+}
+
+function taskKey({ title, priority }) {
+  return JSON.stringify([title.trim().replace(/\s+/g, " ").toLocaleLowerCase("id-ID"), priority]);
+}
+
+function updateTimer(input, own, time, create, owner) {
+  if (input.action === "startFocus") {
+    requireValue(typeof input.requestId === "string" &&
+      /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(input.requestId), "Identitas sesi tidak valid.");
+    const id = `focus:${owner}:${input.requestId}`;
+    if (own.some((record) => record.id === id)) return [];
+    requireValue(!own.some((record) => record.kind === "focusTimer"), "Sudah ada latihan fokus yang aktif. Muat ulang untuk membukanya.", 409);
+    const { durationMinutes, taskId } = input;
+    requireValue(Number.isInteger(durationMinutes) && durationMinutes >= 1 && durationMinutes <= 180, "Durasi fokus harus 1–180 menit.");
+    const target = own.find((record) => record.id === taskId && record.kind === "task" && !record.deleted && !record.completed);
+    requireValue(taskId == null || taskId === "" || target, "Pilih tugas aktif dari akunmu.");
+    const topic = target?.title || text(input.topic ?? "", 300, false) || "Sesi Latihan Fokus Mandiri";
+    return [create("focusTimer", { id, durationMinutes, topic, taskId: target?.id ?? null,
+      deadline: time + durationMinutes * 60_000, remainingMs: null, version: 0 })];
+  }
+  const record = own.find((entry) => entry.id === input.id);
+  const doneKind = input.action === "recordFocus" ? "focus" : input.action === "resetFocus" ? "focusDiscarded" : null;
+  if (doneKind && record?.kind === doneKind) return [];
+  requireValue(record?.kind === "focusTimer", "Latihan fokus tidak ditemukan.", 404);
+  requireValue(record.version === input.version, "Latihan fokus sudah berubah. Muat ulang untuk melanjutkan.", 409);
+  const { deadline, remainingMs, version, ...fields } = record;
+  switch (input.action) {
+    case "pauseFocus":
+      requireValue(deadline > time, "Timer sudah dijeda atau sudah habis.", 409);
+      return [{ ...fields, deadline: null, remainingMs: deadline - time, version: version + 1 }];
+    case "resumeFocus":
+      requireValue(remainingMs > 0, "Timer belum dijeda.", 409);
+      return [{ ...fields, deadline: time + remainingMs, remainingMs: null, version: version + 1 }];
+    case "resetFocus":
+      return [{ ...fields, kind: doneKind }];
+    case "recordFocus":
+      requireValue(deadline && time >= deadline, "Selesaikan durasi latihan sebelum mencatat sesi.", 409);
+      return [{ ...fields, kind: doneKind, createdAt: new Date(deadline).toISOString() }];
+  }
 }
 
 export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
@@ -152,7 +263,8 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     if (scope) requireValue(schools.length, "Sekolah tidak ditemukan.", 404);
     const members = accounts.filter((entry) => !entry.registrationPending && (!scope || entry.schoolId === scope) && (entry.role === "student" || (central && entry.role === "bk")));
     const names = new Map(Sekolah.map(({ id, name }) => [id, name]));
-    const classes = new Map(Kelas.map(({ id, name }) => [id, name]));
+    const classesList = Kelas.filter((entry) => !scope || entry.schoolId === scope).map(({ id, name, schoolId }) => ({ id, name, schoolId }));
+    const classes = new Map(classesList.map(({ id, name }) => [id, name]));
     const isActive = (entry) => entry.enabled && emails.has(entry.email) && active.has(entry.id);
     const schoolsList = schools.map(({ id, name }) => ({ id, name }));
     function statistics() {
@@ -167,13 +279,14 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
 
     const learningByOwner = Map.groupBy(Belajar, (entry) => entry.owner);
     const rows = members.filter((entry) => entry.role === "student" ? includeStudents : includeTeachers).map((entry) => {
-      const profile = { ...publicAccount(entry), school: names.get(entry.schoolId), kelas: classes.get(entry.classId) || "Belum Memiliki Kelas", active: isActive(entry) };
+      const { id, fullName, email, schoolId, classId, nis, lastLoginAt } = entry;
+      const profile = { ...(central ? publicAccount(entry) : { id, fullName, email, schoolId, classId, nis, lastLoginAt, role: entry.role }),
+        school: names.get(schoolId), kelas: classes.get(classId) || "Belum Memiliki Kelas", active: isActive(entry) };
       if (entry.role !== "student") return profile;
       return { ...profile, ...studySummary(learningByOwner.get(entry.id) || []) };
     });
     const teachers = rows.filter((row) => row.role === "bk");
     const students = rows.filter((row) => row.role === "student");
-    const classesList = Kelas.map(({ id, name, schoolId }) => ({ id, name, schoolId }));
     if (page === "guru-bk") return { teachers, schools: schoolsList };
     if (page === "siswa") return { students, schools: schoolsList, classes: classesList };
     const result = { students, schools: schoolsList };
@@ -190,6 +303,81 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
   return {
     context,
     dashboard,
+
+    async bkSummary(access) {
+      allow(access, "bk");
+      const { schoolId } = access.actor;
+      const { Sekolah, Belajar, Angket } = await store.read("Sekolah", "Belajar", "Angket");
+      const school = Sekolah.find(({ id }) => id === schoolId);
+      requireValue(school, "Sekolah tidak ditemukan.", 404);
+      const ids = new Set(access.accounts.filter((account) => account.role === "student" && account.schoolId === schoolId).map(({ id }) => id));
+      const learning = Map.groupBy(Belajar.filter(({ owner }) => ids.has(owner)), ({ owner }) => owner);
+      const totals = { students: ids.size, activeLearners: 0, rplAchieved: 0, doneTasks: 0, focusCount: 0, reflectionCount: 0 };
+      const barriers = Object.fromEntries(BARRIERS.map((id) => [id, 0]));
+      let barrierRespondents = 0;
+      for (const records of learning.values()) {
+        const summary = studySummary(records);
+        if (summary.rplCount > 0) totals.activeLearners++;
+        if (summary.rplCount >= 3) totals.rplAchieved++;
+        for (const key of ["doneTasks", "focusCount", "reflectionCount"]) totals[key] += summary[key];
+        const choices = new Set(records.find(({ kind }) => kind === "barriers")?.selectedBarriers || []);
+        if (choices.size) barrierRespondents++;
+        for (const id of choices) if (Object.hasOwn(barriers, id)) barriers[id]++;
+      }
+      const responses = Angket.filter((row) => row.schoolId === schoolId);
+      const survey = Object.fromEntries(Object.keys(SURVEY_ITEMS).map((key) => [key, [0, 0, 0, 0, 0]]));
+      for (const { answers } of responses) {
+        for (const key of Object.keys(survey)) survey[key][answers[key] - 1]++;
+      }
+      return { school: school.name, totals, barriers, barrierRespondents, survey, surveyRespondents: responses.length };
+    },
+
+    importSurvey(access, { rows, preview = false }) {
+      allow(access, "bk");
+      return serialize(async () => {
+        requireValue(typeof preview === "boolean", "Pilihan pratinjau tidak valid.");
+        const { schoolId } = access.actor;
+        const { Angket } = await store.read("Angket");
+        const seen = new Set(Angket.filter((entry) => entry.schoolId === schoolId).map(({ code }) => code));
+        const { records, report } = importRows(rows, seen, (row) => {
+          const code = text(row.code, 64).toLowerCase();
+          requireValue(/^[a-z0-9_-]+$/.test(code), "Kode respons hanya boleh berisi huruf, angka, garis bawah, atau tanda hubung.");
+          const answers = {};
+          for (const key of Object.keys(SURVEY_ITEMS)) {
+            const answer = row[key];
+            requireValue((typeof answer === "number" || typeof answer === "string") && /^[1-5]$/.test(String(answer).trim()),
+              `Jawaban ${key} harus berupa angka bulat 1–5.`);
+            answers[key] = Number(answer);
+          }
+          return { id: randomUUID(), schoolId, code, answers };
+        }, ({ code }) => code);
+        if (!preview) await store.write(records.map((record) => ["Angket", record]));
+        return report;
+      });
+    },
+
+    async modules(access) {
+      allow(access, "bk", "student");
+      const { Modul } = await store.read("Modul");
+      return schoolModules(Modul, access.actor.schoolId);
+    },
+
+    saveModule(access, input, moduleId, deleted = false) {
+      allow(access, "bk");
+      return serialize(async () => {
+        const { schoolId } = access.actor;
+        const { Modul } = await store.read("Modul");
+        const existing = moduleId && schoolModules(Modul, schoolId).find((record) => record.id === moduleId);
+        requireValue(!moduleId || existing, "Modul tidak ditemukan.", 404);
+        const previous = Modul.find((record) => record.schoolId === schoolId && record.moduleId === moduleId);
+        const id = previous?.id || randomUUID();
+        const links = deleted ? null : driveLinks(input.editUrl);
+        requireValue(deleted || links, "Masukkan tautan berkas Google Drive, Docs, Sheets, atau Slides yang valid.");
+        const fields = deleted ? { deleted: true } : { title: text(input.title, 160), category: text(input.category ?? "", 80, false),
+          description: text(input.description, 1500), editUrl: links.editUrl };
+        await store.write([["Modul", { ...previous, id, moduleId: moduleId || id, schoolId, ...fields }]]);
+      });
+    },
 
     async centralView(access, page, schoolId) {
       allow(access, "admin");
@@ -344,8 +532,8 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     async learning(access) {
       allow(access, "student");
       const { Kelas, Belajar } = await store.read("Kelas", "Belajar");
-      return { kelas: Kelas.find((entry) => entry.id === access.actor.classId)?.name || "Belum Memiliki Kelas",
-        data: learningData(Belajar.filter((entry) => entry.owner === access.actor.id)) };
+      return { kelas: Kelas.find((entry) => entry.id === access.actor.classId && entry.schoolId === access.actor.schoolId)?.name || "Belum Memiliki Kelas",
+        data: learningData(Belajar.filter((entry) => entry.owner === access.actor.id), now()) };
     },
 
     updateLearning(access, input) {
@@ -353,37 +541,64 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       return serialize(async () => {
         const { Belajar } = await store.read("Belajar");
         const own = Belajar.filter((entry) => entry.owner === access.actor.id);
-        const create = (kind, fields) => ({ id: randomUUID(), owner: access.actor.id, kind, createdAt: new Date(now()).toISOString(), ...fields });
-        const task = ({ title, priority, completed, sourceDate }, importing = false) => {
+        const time = now();
+        const timestamp = new Date(time).toISOString();
+        const create = (kind, fields) => ({ id: fields.id || randomUUID(), owner: access.actor.id, kind, createdAt: timestamp, ...fields });
+        const taskFields = ({ title, priority }) => {
           requireValue(PRIORITIES.includes(priority), "Prioritas tidak valid.");
-          return create("task", { title: text(title, 300), priority, completed: importing && completed === true,
-            sourceDate: importing && sourceDate ? text(sourceDate, 60, false) : "" });
+          return { title: text(title, 300), priority };
         };
+        let importReport;
         let changes;
         switch (input.action) {
-          case "addTask": changes = [task(input)]; break;
-          case "importTasks":
-            requireValue(Array.isArray(input.tasks) && input.tasks.length <= 500, "Unggah maksimal 500 tugas per impor.");
-            changes = input.tasks.map((entry) => task(entry, true));
-            break;
-          case "toggleTask": {
-            const previous = own.find((entry) => entry.kind === "task" && entry.id === input.id);
-            requireValue(previous, "Tugas tidak ditemukan.", 404);
-            changes = [{ ...previous, completed: !previous.completed }];
+          case "addTask": changes = [create("task", { ...taskFields(input), completed: false })]; break;
+          case "importTasks": {
+            requireValue(input.preview === undefined || typeof input.preview === "boolean", "Pilihan pratinjau tidak valid.");
+            const seen = new Set(own.filter(({ kind }) => kind === "task").flatMap((entry) => [taskKey(entry), entry.importKey]));
+            const result = importRows(input.tasks, seen, (entry) => {
+              requireValue(typeof entry.completed === "boolean", "Status harus Selesai atau Belum Selesai.");
+              const fields = taskFields(entry);
+              return create("task", { ...fields, importKey: taskKey(fields), completed: entry.completed, sourceDate: text(entry.sourceDate ?? "", 60, false) });
+            }, taskKey);
+            changes = input.preview === true ? [] : result.records;
+            importReport = result.report;
             break;
           }
+          case "toggleTask":
+          case "editTask":
+          case "deleteTask": {
+            const previous = own.find((entry) => entry.kind === "task" && entry.id === input.id);
+            requireValue(previous, "Tugas tidak ditemukan.", 404);
+            if (input.action === "deleteTask") {
+              changes = previous.deleted ? [] : [{ ...previous, deleted: true }];
+              break;
+            }
+            requireValue(!previous.deleted, "Tugas tidak ditemukan.", 404);
+            if (input.action === "editTask") changes = [{ ...previous, ...taskFields(input), updatedAt: timestamp }];
+            else {
+              requireValue(typeof input.completed === "boolean", "Status tugas tidak valid.");
+              changes = input.completed === previous.completed ? [] : [{
+                ...previous, completed: input.completed, completedAt: input.completed ? timestamp : null, updatedAt: timestamp,
+              }];
+            }
+            break;
+          }
+          case "startFocus":
+          case "pauseFocus":
+          case "resumeFocus":
+          case "resetFocus":
           case "recordFocus":
-            requireValue([10, 25, 50].includes(input.durationMinutes), "Durasi fokus tidak valid.");
-            changes = [create("focus", { durationMinutes: input.durationMinutes, topic: text(input.topic || "Sesi Latihan Fokus Mandiri", 300) })];
+            changes = updateTimer(input, own, time, create, access.actor.id);
             break;
           case "saveReflection":
             changes = [create("reflection", { learned: text(input.learned, 3000), feeling: text(input.feeling, 3000), improvement: text(input.improvement, 3000) })];
             break;
           case "saveBarriers": {
-            requireValue(Array.isArray(input.barrierIds) && input.barrierIds.every((id) => BARRIERS.includes(id)), "Pilihan hambatan tidak valid.");
+            requireValue(Array.isArray(input.barrierIds) && input.barrierIds.length <= BARRIERS.length &&
+              input.barrierIds.every((id) => BARRIERS.includes(id)), "Pilihan hambatan tidak valid.");
             const selectedBarriers = [...new Set(input.barrierIds)];
             const previous = own.find((entry) => entry.kind === "barriers");
-            changes = [previous ? { ...previous, selectedBarriers } : create("barriers", { selectedBarriers })];
+            changes = [previous ? { ...previous, selectedBarriers, updatedAt: timestamp } : create("barriers", { selectedBarriers })];
             break;
           }
           default: throw new AppError(400, "Tindakan belajar tidak valid.");
@@ -391,7 +606,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         await store.write(changes.map((entry) => ["Belajar", entry]));
         const updated = new Map(own.map((entry) => [entry.id, entry]));
         for (const entry of changes) updated.set(entry.id, entry);
-        return learningData([...updated.values()]);
+        return { ...learningData([...updated.values()], now()), ...(importReport ? { importReport } : {}) };
       });
     },
   };

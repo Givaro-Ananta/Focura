@@ -1,12 +1,10 @@
 import { api } from "./auth.js";
+import { setupBkPage } from "./bk.js";
 import { exportAdminRecapWorkbook } from "./excel-sync.js";
+import { APP_CONFIG } from "./config.js";
+import { JAKARTA } from "./learning-rules.js";
+import { escapeHtml, showDialog } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
-
-export function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[character]);
-}
 
 const roles = { admin: "Admin Central", bk: "Guru BK", student: "Siswa", guardian: "Orang Tua/Wali" };
 const accountStatuses = {
@@ -25,6 +23,10 @@ const pageDetails = {
   akun: ["lock", "Tetapkan peran dan izin login untuk akun yang terdaftar."],
   "orang-tua": ["users", "Kelola siswa yang dapat dilihat oleh setiap orang tua atau wali."],
   rpl: ["document", "Panduan pelaksanaan layanan bimbingan klasikal menggunakan Focura."],
+  "beranda-bk": ["home", "Ringkasan aktivitas pendampingan di sekolah penugasan."],
+  pemantauan: ["chart", "Pantau aktivitas belajar, angket kebutuhan awal, dan pemetaan hambatan siswa."],
+  materi: ["book", "Kelola materi Google Drive yang tersedia di sekolah penugasan."],
+  database: ["document", "Ekspor rekap dan impor hasil angket kebutuhan awal."],
 };
 
 function icon(name) {
@@ -50,7 +52,7 @@ function identity(name, description) {
 }
 
 function sessionStatus(account) {
-  const lastLogin = account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleString("id-ID") : "Belum pernah login";
+  const lastLogin = account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleString("id-ID", { timeZone: JAKARTA }) : "Belum pernah login";
   return `<span class="session-status${account.active ? " is-active" : ""}">${account.active ? "Sedang login" : "Tidak aktif"}</span>
     <span class="workspace-meta">${escapeHtml(lastLogin)}</span>`;
 }
@@ -99,7 +101,7 @@ function accountDirectory(data, role, status) {
   const rows = data.accounts.filter((account) => (!role || account.role === role) && (!status || accountStatus(account) === status))
     .sort((a, b) => Number(Boolean(b.registrationPending)) - Number(Boolean(a.registrationPending)))
     .map((account) => [
-      identity(account.fullName, account.email), roles[account.role],
+      identity(account.fullName, account.email), escapeHtml(roles[account.role]),
       accountStatuses[accountStatus(account)],
       rowAction("edit-account", account.registrationPending ? "Tinjau pendaftaran" : "Kelola", account.email),
     ]);
@@ -123,18 +125,6 @@ function guardianDirectory(data) {
     names.get(guardianId), names.get(studentId),
     `<button type="button" class="workspace-row-action" data-action="unlink" data-guardian="${escapeHtml(guardianId)}" data-student="${escapeHtml(studentId)}">Lepas tautan</button>`,
   ]), "Belum ada wali yang ditautkan ke siswa.");
-}
-
-function showDialog(container, title, fields) {
-  const dialog = document.createElement("dialog");
-  dialog.className = "workspace-dialog";
-  dialog.setAttribute("aria-labelledby", "workspace-dialog-title");
-  dialog.innerHTML = `<div class="workspace-dialog-heading"><h2 id="workspace-dialog-title">${escapeHtml(title)}</h2>
-    <button type="button" class="workspace-row-action" data-action="close-dialog">Tutup</button></div>
-    <p class="workspace-feedback" role="status"></p>${fields}`;
-  container.append(dialog);
-  dialog.addEventListener("close", () => dialog.remove(), { once: true });
-  dialog.showModal();
 }
 
 function accountForm(data, address) {
@@ -170,7 +160,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const feedback = document.getElementById("monitor-feedback");
   const actions = document.getElementById("monitor-actions");
   const nav = document.getElementById("monitor-nav");
-  const defaultPage = central ? "ringkasan" : "siswa";
+  const defaultPage = central ? "ringkasan" : "beranda-bk";
   document.getElementById("monitor-role").textContent = name;
   document.getElementById("monitor-title").textContent = pages[section];
   document.getElementById("monitor-description").textContent = pageDetails[section || defaultPage][1];
@@ -182,22 +172,29 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   nav.scrollLeft = Math.max(0, activeEdge - nav.getBoundingClientRect().right);
 
   if (section === "rpl") {
-    actions.innerHTML = '<a href="https://forms.gle/SNFh7o8WdDHCGU8XA" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Formulir konsultasi</a>';
+    actions.innerHTML = `<a href="${escapeHtml(APP_CONFIG.consultationFormUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Formulir konsultasi</a>`;
     renderRPLSection("monitor-content");
+    return;
+  }
+  if (!central && section !== "siswa") {
+    await setupBkPage(section, { content, feedback, actions });
     return;
   }
 
   const endpoint = central ? "central/views/" + (section || "ringkasan") : "bk/students";
-  const studentsView = !central || section === "siswa";
+  const studentsView = section === "siswa";
   const filters = new URLSearchParams(window.location.search);
   let school = filters.get("sekolah") || "";
   let grade = filters.get("kelas") || "";
+  let search = "";
   let accountRole = "";
   let accountState = "";
   let data;
   let busy = false;
   const matchesSchool = (row) => !central || !school || row.schoolId === school;
-  const matchesClass = (student) => !central || !grade || (student.classId || "unassigned") === grade;
+  const matchesClass = (student) => !grade || (student.classId || "unassigned") === grade;
+  const matchesSearch = (student) => !search || [student.fullName, student.email, student.nis]
+    .some((value) => String(value ?? "").toLocaleLowerCase("id-ID").includes(search.trim().toLocaleLowerCase("id-ID")));
 
   actions.innerHTML = `<button type="button" class="btn btn-outline" data-action="refresh">Muat ulang</button>
     ${studentsView ? '<button type="button" class="btn btn-outline" data-action="export">Ekspor Excel</button>' : ""}
@@ -205,18 +202,37 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     ${section === "sekolah" ? '<button type="button" class="btn btn-primary" data-action="add-school">Tambah sekolah</button>' : ""}
     ${section === "orang-tua" ? '<button type="button" class="btn btn-primary" data-action="link" disabled>Tautkan wali</button>' : ""}`;
 
-  function render() {
-    if (studentsView) {
-      const students = data.students.filter(matchesSchool).filter(matchesClass);
-      content.innerHTML = `${central ? directoryFilters(data, school, grade, true) : `<p class="workspace-note">${escapeHtml(data.schools[0]?.name)}</p>`}
-        ${table(["Siswa", "Sekolah dan kelas", "Status sesi", "Progres", ...(central ? ["Tindakan"] : [])],
+  function renderStudentRows() {
+    const students = data.students.filter(matchesSchool).filter(matchesClass).filter(matchesSearch);
+    document.getElementById("directory-results").innerHTML = central
+      ? table(["Siswa", "Sekolah dan kelas", "Status sesi", "Progres", "Tindakan"],
           students.map((student) => [
             identity(student.fullName, student.nis ? `NIS ${student.nis}` : ""),
             identity(student.kelas, student.school),
             sessionStatus(student),
             `${student.focusCount} sesi · ${student.reflectionCount} refleksi<span class="workspace-meta">${student.rplCount}/4 indikator RPL</span>`,
-            ...(central ? [rowAction("edit-class", "Ubah kelas", student.id)] : []),
-          ]), "Tidak ada siswa dalam daftar ini.")}`;
+            rowAction("edit-class", "Ubah kelas", student.id),
+          ]), "Tidak ada siswa dalam daftar ini.")
+      : table(["Peserta didik", "Kelas", "Aktivitas RPL", "Sesi fokus", "Privasi refleksi", "Status sesi"], students.map((student) => [
+        identity(student.fullName, student.email),
+        identity(student.kelas, student.nis ? `NIS ${student.nis}` : ""),
+        identity(`${student.rplCount}/4`, student.rplCount >= 3 ? "Tercapai" : "Perlu pendampingan"),
+        escapeHtml(student.focusCount),
+        identity("Isi privat", `${student.reflectionCount} catatan`),
+        sessionStatus(student),
+      ]), "Tidak ada peserta didik yang cocok.");
+  }
+
+  function render() {
+    if (studentsView) {
+      content.innerHTML = `${central ? directoryFilters(data, school, grade, true) : `
+        <p class="workspace-note">${escapeHtml(data.schools[0]?.name)} · Ketercapaian RPL minimal 3 dari 4 aktivitas.</p>
+        <div class="workspace-filters">
+          <label>Cari peserta didik<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(search)}" placeholder="Nama, email, atau NIS"></label>
+          <label>Kelas<select class="form-control" id="filter-class">${options([["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
+            ...data.classes.map(({ id, name }) => [id, name])], grade)}</select></label>
+        </div>`}<div id="directory-results"></div>`;
+      renderStudentRows();
     } else if (section === "guru-bk") {
       content.innerHTML = directoryFilters(data, school, grade, false) + table(["Guru BK", "Sekolah", "Status sesi"],
         data.teachers.filter(matchesSchool).map((teacher) => [identity(teacher.fullName), escapeHtml(teacher.school), sessionStatus(teacher)]),
@@ -268,10 +284,6 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) return;
     const { action, id, guardian, student } = actionButton.dataset;
-    if (action === "close-dialog") {
-      actionButton.closest("dialog").close();
-      return;
-    }
     if (action === "refresh") {
       await refresh("Data diperbarui.");
       return;
@@ -280,7 +292,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     if (action === "export") {
       try {
         const current = await api(central && school ? `${endpoint}?school=${encodeURIComponent(school)}` : endpoint);
-        exportAdminRecapWorkbook(current.students.filter(matchesClass));
+        exportAdminRecapWorkbook(current.students.filter(matchesClass).filter(matchesSearch));
       } catch (error) {
         feedback.textContent = error.message;
       }
@@ -318,6 +330,12 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     } else if (action === "unlink") {
       await save(() => api("central/guardian-links", "POST", { guardianId: guardian, studentId: student, enabled: false }));
     }
+  });
+
+  content.addEventListener("input", (event) => {
+    if (event.target.id !== "filter-student-search") return;
+    search = event.target.value;
+    renderStudentRows();
   });
 
   content.addEventListener("change", (event) => {

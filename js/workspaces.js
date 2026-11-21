@@ -15,7 +15,14 @@ export const WORKSPACES = {
   bk: {
     role: "bk",
     name: "Guru BK",
-    pages: { "": "Siswa", rpl: "Panduan RPL" },
+    pages: {
+      "": "Beranda Konselor",
+      siswa: "Data Peserta Didik",
+      pemantauan: "Pemantauan & Angket",
+      materi: "Kelola Materi",
+      rpl: "RPL & Evaluasi",
+      database: "Database Excel & Form",
+    },
   },
 };
 

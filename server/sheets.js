@@ -1,7 +1,7 @@
 import { JWT } from "google-auth-library";
 import { emailAddress } from "./focura.js";
 
-export const TABLES = ["Akun", "Sekolah", "Kelas", "TautanWali", "Sesi", "Belajar"];
+export const TABLES = ["Akun", "Sekolah", "Kelas", "TautanWali", "Sesi", "Belajar", "Modul", "Angket"];
 let client;
 let sheetIds;
 

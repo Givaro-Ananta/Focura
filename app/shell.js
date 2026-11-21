@@ -6,14 +6,15 @@ import Initialize from "./initialize.js";
 
 export default async function FocuraShell({ workspace, section }) {
   const template = await readFile(join(process.cwd(), "index.html"), "utf8");
-  const [login, student, monitor, guardian] = template.split("<body>")[1].split("</body>")[0]
-    .split(/<!-- workspace:(?:student|monitor|guardian) -->/);
+  const [login, student, monitor, guardian, shared] = template.split("<body>")[1].split("</body>")[0]
+    .split(/<!-- workspace:(?:student|monitor|guardian|shared) -->/);
   return <>
     <div id="focura" data-demo={demoEnabled || undefined} data-workspace={workspace} data-section={section}
-      dangerouslySetInnerHTML={{ __html: workspace ? login + monitor : login + student + guardian }} />
+      dangerouslySetInnerHTML={{ __html: login + (workspace ? monitor : student + guardian) + shared }} />
     {workspace && <p id="workspace-loading" className="workspace-loading" role="status">Memuat ruang kerja…</p>}
-    {(!workspace || (workspace === "bk" && !section) || section === "siswa") &&
-      <Script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js" strategy="lazyOnload" />}
+    {(!workspace || section === "siswa" || section === "database") &&
+      <Script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js" strategy="lazyOnload"
+        integrity="sha384-gx12pQMMYnabkTgbCHqqrT65RwDnXI/f/dU2H9JUmT0KUeiMF5bf+yroQBmX0Nuk" crossOrigin="anonymous" />}
     <Initialize />
   </>;
 }

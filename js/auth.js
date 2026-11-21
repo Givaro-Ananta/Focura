@@ -7,8 +7,8 @@ export async function getActiveSession() {
   return data.user || null;
 }
 
-export function loginUser(provider, callbackUrl) {
-  return signIn(provider, { callbackUrl });
+export function loginUser(provider, callbackUrl, options) {
+  return signIn(provider, { callbackUrl, ...options });
 }
 
 export function logoutUser() {
@@ -21,6 +21,6 @@ export async function api(path, method = "GET", body) {
   });
   const data = await response.json();
   if (response.status === 401) window.location.replace("/?error=SessionExpired");
-  if (!response.ok) throw new Error(data.error || "Permintaan tidak dapat diproses.");
+  if (!response.ok) throw Object.assign(new Error(data.error || "Permintaan tidak dapat diproses."), { status: response.status });
   return data;
 }

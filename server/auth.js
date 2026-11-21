@@ -1,6 +1,6 @@
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import { createDemoStore, demoEnabled, demoProfile } from "./demo.js";
+import { createDemoStore, demoEnabled, demoProfile, demoProfiles } from "./demo.js";
 import { createFocura, isAppError, SESSION_AGE } from "./focura.js";
 import { sheets } from "./sheets.js";
 
@@ -16,8 +16,14 @@ export const focura = globalThis[key] ??= createFocura(demoEnabled ? createDemoS
 const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: demoEnabled
-    ? [credentialsProvider({ id: "demo", name: demoProfile.name, credentials: {},
-      authorize: () => ({ id: demoProfile.sub, email: demoProfile.email, name: demoProfile.name }) })]
+    ? [credentialsProvider({ id: "demo", name: demoProfile.name, credentials: { demoAccount: { type: "text" } },
+      authorize(credentials) {
+        const id = credentials?.demoAccount || "admin";
+        if (!Object.hasOwn(demoProfiles, id)) return null;
+        const { email, name } = demoProfiles[id];
+        return { id, email, name };
+      },
+    })]
     : [googleProvider({ clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET })],
   pages: { signIn: "/", error: "/" },
   session: { strategy: "jwt", maxAge: SESSION_AGE },
@@ -55,14 +61,14 @@ export function createAuthOptions() {
         registerTeacher = !demoEnabled && local && target.pathname === "/" && target.searchParams.get("daftar") === "guru-bk";
         return local ? target.href : baseUrl;
       },
-      async signIn({ account, profile }) {
+      async signIn({ account, profile, user }) {
         if (account?.provider !== (demoEnabled ? "demo" : "google")) return false;
         try {
           if (registerTeacher) {
             const pending = await focura.registerTeacher(profile);
             return pending ? "/?pendaftaran=tertunda" : "/?pendaftaran=akun-ada";
           }
-          account.focuraSessionId = await focura.startSession(demoEnabled ? demoProfile : profile);
+          account.focuraSessionId = await focura.startSession(demoEnabled ? demoProfiles[user.id] : profile);
           return true;
         } catch (error) {
           if (isAppError(error)) {

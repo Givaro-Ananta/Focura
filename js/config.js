@@ -35,11 +35,13 @@ export const APP_CONFIG = {
     }
   ],
   barriersList: [
-    { id: "hp", label: "Mudah terdistraksi oleh HP & notifikasi media sosial", tip: "Aktifkan mode Jangan Ganggu (Do Not Disturb) atau letakkan HP di luar jangkauan tangan selama sesi fokus." },
-    { id: "waktu", label: "Sulit mengatur waktu dan membagi prioritas belajar", tip: "Gunakan fitur Atur Tugas untuk memecah materi besar menjadi target 15–25 menit." },
-    { id: "bosan", label: "Mudah merasa bosan atau lelah saat belajar lama", tip: "Terapkan siklus belajar singkat (10–25 menit) diikuti jeda peregangan ringan selama 3–5 menit." },
-    { id: "materi", label: "Kesulitan memahami materi pelajaran yang kompleks", tip: "Baca ringkasan modul di Google Drive terlebih dahulu lalu catat poin pertanyaan untuk didiskusikan." },
-    { id: "tunda", label: "Sering menunda-nunda tugas sekolah (prokrastinasi)", tip: "Mulai dari tugas berdurasi 10 menit menggunakan timer Mulai Fokus agar hambatan awal berkurang." }
+    { id: "hp", label: "Distraksi HP dan media sosial", explanation: "Notifikasi dapat memecah perhatian dan menyulitkanmu kembali ke tugas.", tip: "Aktifkan mode Jangan Ganggu atau simpan HP di luar jangkauan untuk satu sesi fokus." },
+    { id: "waktu", label: "Kesulitan mengatur waktu", explanation: "Target yang terlalu luas bisa membuat sulit menentukan langkah awal.", tip: "Gunakan Atur Tugas untuk membagi materi menjadi target 15–25 menit." },
+    { id: "bosan", label: "Mudah bosan atau lelah", explanation: "Perhatian dapat menurun ketika belajar terlalu lama tanpa jeda.", tip: "Coba satu sesi fokus 10–25 menit lalu ambil jeda peregangan 3–5 menit." },
+    { id: "lingkungan", label: "Lingkungan belajar tidak kondusif", explanation: "Suara, lalu lintas orang, atau meja yang penuh bisa mengalihkan perhatian.", tip: "Siapkan tempat yang lebih tenang dan sisakan hanya perlengkapan untuk satu tugas." },
+    { id: "melayang", label: "Pikiran mudah melayang atau kehilangan fokus", explanation: "Pikiran lain terkadang muncul saat mengerjakan tugas.", tip: "Catat pikiran itu singkat, lalu kembali ke satu langkah yang bisa kamu selesaikan sekarang." },
+    { id: "materi", label: "Kesulitan memahami materi pelajaran yang kompleks", explanation: "Bagian yang belum dipahami bisa menghentikan alur belajar.", tip: "Baca ringkasan modul di Google Drive terlebih dahulu lalu catat poin pertanyaan untuk didiskusikan." },
+    { id: "tunda", label: "Sering menunda-nunda tugas sekolah (prokrastinasi)", explanation: "Memulai tugas bisa terasa berat saat langkah pertamanya belum jelas.", tip: "Mulai dari tugas berdurasi 10 menit menggunakan timer Mulai Fokus agar hambatan awal berkurang." }
   ],
   rplDocument: {
     judul: "RENCANA PELAKSANAAN LAYANAN (RPL) BIMBINGAN KLASIKAL BIDANG BELAJAR",
@@ -55,6 +57,9 @@ export const APP_CONFIG = {
     ],
     rasional: "Peserta didik jenjang SMA menghadapi tuntutan akademik yang beragam dan perlu mengelola perhatian secara mandiri baik di kelas maupun di rumah. Website interaktif FOCURA (Ruang Fokus) dirancang sebagai suplemen layanan tatap muka yang edukatif, preventif, non-diagnostik, serta menjunjung tinggi perlindungan data pribadi dan privasi siswa sesuai UU No. 27 Tahun 2022.",
     tujuanUmum: "Peserta didik mampu mengenali faktor pemicu gangguan konsentrasi belajar, menerapkan strategi pengelolaan perhatian serta regulasi diri secara mandiri, dan menyusun target serta refleksi belajar yang terarah melalui website interaktif FOCURA.",
+    materiPokok: "Konsentrasi dan pemusatan perhatian, pemicu distraksi, pengelolaan waktu, penentuan prioritas belajar, serta regulasi diri dan refleksi.",
+    evaluasi: "Tinjau ketercapaian minimal tiga dari empat aktivitas Focura melalui pemetaan hambatan, penyusunan tugas, sesi fokus selesai, dan pencatatan refleksi. Gunakan indikator aktivitas dan diskusi sukarela. Isi refleksi tetap berada di ruang pribadi siswa.",
+    tindakLanjut: "Peserta didik mencoba strategi fokus pada kegiatan belajar berikutnya. Guru BK memberi penguatan dan menyediakan konsultasi sukarela melalui formulir yang tersedia.",
     langkahPelaksanaan: [
       { tahap: "1. Pendahuluan (10 Menit)", rincian: "Guru BK menyapa peserta didik, membangun suasana kondusif, menyampaikan tujuan layanan, menjelaskan prinsip privasi data & persetujuan sadar (informed consent), serta mengarahkan siswa masuk dengan akun Google yang terdaftar di Focura." },
       { tahap: "2. Kegiatan Inti — Eksplorasi & Identifikasi (15 Menit)", rincian: "Peserta didik membaca ringkasan pada halaman Beranda & menu Materi (terhubung Google Drive), lalu mengisi fitur Kenali Hambatan secara non-diagnostik." },

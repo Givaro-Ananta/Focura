@@ -14,10 +14,17 @@ const routes = [
   ["PATCH", /^central\/accounts\/([^/]+)$/, "admin", (access, id, body) => focura.saveAccount(access, body, id)],
   ["PATCH", /^central\/students\/([^/]+)\/class$/, "admin", (access, id, body) => focura.setClass(access, id, body)],
   ["POST", /^central\/guardian-links$/, "admin", (access, _, body) => focura.setGuardianLink(access, body)],
-  ["GET", /^bk\/students$/, "bk", (access, _, __, query) => focura.dashboard(access, query.get("school"))],
+  ["GET", /^bk\/students$/, "bk", (access, _, __, query) => focura.dashboard(access, query.get("school"), "siswa")],
+  ["GET", /^bk\/summary$/, "bk", (access) => focura.bkSummary(access)],
+  ["POST", /^bk\/survey$/, "bk", (access, _, body) => focura.importSurvey(access, body)],
+  ["GET", /^bk\/modules$/, "bk", (access) => focura.modules(access)],
+  ["POST", /^bk\/modules$/, "bk", (access, _, body) => focura.saveModule(access, body)],
+  ["PATCH", /^bk\/modules\/([^/]+)$/, "bk", (access, id, body) => focura.saveModule(access, body, id)],
+  ["DELETE", /^bk\/modules\/([^/]+)$/, "bk", (access, id) => focura.saveModule(access, null, id, true)],
   ["GET", /^guardian\/children$/, "guardian", (access) => focura.children(access)],
   ["GET", /^me\/learning$/, "student", (access) => focura.learning(access)],
   ["POST", /^me\/learning$/, "student", (access, _, body) => focura.updateLearning(access, body)],
+  ["GET", /^me\/modules$/, "student", (access) => focura.modules(access)],
 ];
 
 function json(data, status = 200) {
@@ -38,8 +45,12 @@ async function handle(request, context) {
     if (method !== "GET") {
       const origin = new URL(process.env.NEXTAUTH_URL || request.url).origin;
       if (request.headers.get("origin") !== origin) return json({ error: "Asal permintaan tidak valid." }, 403);
-      body = await request.json().catch(() => null);
-      if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "Data permintaan tidak valid." }, 400);
+      if (method !== "DELETE") {
+        const raw = await request.text();
+        if (raw.length > 1_000_000) return json({ error: "Data permintaan terlalu besar." }, 413);
+        try { body = JSON.parse(raw); } catch { body = null; }
+        if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "Data permintaan tidak valid." }, 400);
+      }
     }
     const [, id] = pattern.exec(path.join("/"));
     const result = await action(access, id, body, url.searchParams);
@@ -51,4 +62,4 @@ async function handle(request, context) {
   }
 }
 
-export { handle as GET, handle as POST, handle as PATCH };
+export { handle as GET, handle as POST, handle as PATCH, handle as DELETE };

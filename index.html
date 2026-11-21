@@ -22,6 +22,14 @@
         <p id="auth-help">Gunakan akun Google yang sudah aktif di Focura.</p>
         <div id="auth-alert" role="alert"></div>
         <div id="auth-status" role="status"></div>
+        <label id="demo-account-choice" class="form-group hidden">Akun demo
+          <select id="demo-account" class="form-control">
+            <option value="admin">Admin Central</option>
+            <option value="bk">Guru BK · Bandar Lampung</option>
+            <option value="student">Siswa · Bandar Lampung</option>
+            <option value="student-other">Siswa · Talang Padang</option>
+          </select>
+        </label>
         <button id="btn-google-login" type="button" class="btn btn-primary btn-block" aria-describedby="auth-help" disabled>
           <svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#key" /></svg>
           <span id="auth-button-label">Masuk dengan Google</span>
@@ -93,25 +101,15 @@
             <h2>Mulai dari satu langkah kecil.</h2>
             <p>Ikuti alur bimbingan klasikal untuk membangun kebiasaan belajar yang lebih fokus.</p>
           </div>
-          <button type="button" class="btn student-intro-action" data-open-section="materi">Buka materi</button>
+          <p class="student-private-status"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#lock" /></svg> Ruang pribadi aktif</p>
         </div>
-        <div class="student-home-grid">
-          <section class="card" aria-labelledby="learning-steps">
-            <h2 id="learning-steps">Alur bimbingan klasikal</h2>
-            <ol class="learning-steps">
-              <li><button type="button" data-open-section="materi"><strong>Baca materi</strong><span>Jelajahi tiga modul konsentrasi belajar.</span></button></li>
-              <li><button type="button" data-open-section="hambatan"><strong>Kenali hambatan</strong><span>Temukan situasi yang sering mengganggu fokusmu.</span></button></li>
-              <li><button type="button" data-open-section="tugas"><strong>Atur tugas dan target</strong><span>Pilih prioritas belajar harianmu.</span></button></li>
-              <li><button type="button" data-open-section="fokus"><strong>Latih fokus</strong><span>Gunakan timer 10, 25, atau 50 menit.</span></button></li>
-              <li><button type="button" data-open-section="refleksi"><strong>Tulis refleksi</strong><span>Catat hal yang ingin kamu perbaiki.</span></button></li>
-            </ol>
-          </section>
-          <section class="card student-support" aria-labelledby="student-support-title">
-            <span class="icon-tile" aria-hidden="true"><svg><use href="/assets/svg/interface.svg#message" /></svg></span>
-            <h2 id="student-support-title">Konsultasi Guru BK</h2>
-            <p>Kamu bisa meminta pendampingan belajar lewat formulir konsultasi sukarela.</p>
-            <button type="button" class="btn btn-outline" data-open-section="konsultasi">Lihat pilihan konsultasi</button>
-          </section>
+        <div class="student-feature-grid" aria-label="Fitur belajar">
+          <button class="card student-feature" type="button" data-open-section="tugas"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#checklist" /></svg></span><strong>Atur Tugas</strong><span>Susun target dan tentukan prioritas harianmu.</span></button>
+          <button class="card student-feature" type="button" data-open-section="fokus"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg></span><strong>Mulai Fokus</strong><span>Latih perhatian dengan timer untuk satu target belajar.</span></button>
+          <button class="card student-feature" type="button" data-open-section="materi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book" /></svg></span><strong>Materi dan Modul Drive</strong><span>Baca panduan belajar yang tersedia di sekolahmu.</span></button>
+          <button class="card student-feature" type="button" data-open-section="refleksi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg></span><strong>Refleksi Belajar</strong><span>Catat pengalaman dan rencana perbaikan secara pribadi.</span></button>
+          <button class="card student-feature" type="button" data-open-section="hambatan"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#target" /></svg></span><strong>Kenali Hambatan</strong><span>Pilih situasi yang mengganggu fokus dan coba strateginya.</span></button>
+          <button class="card student-feature" type="button" data-open-section="konsultasi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#message" /></svg></span><strong>Konsultasi Guru BK</strong><span>Ajukan pendampingan belajar secara sukarela.</span></button>
         </div>
       </section>
 
@@ -128,8 +126,10 @@
           <h2 class="panel-title">Kenali hambatan belajar</h2>
           <p class="panel-description">Pilih situasi yang paling sering mengganggu fokusmu. Hasilnya bersifat non-diagnostik.</p>
           <div id="barriers-checklist"></div>
-          <button id="btn-save-barriers" class="btn btn-primary">Simpan Hasil Identifikasi</button>
+          <button id="btn-save-barriers" type="button" class="btn btn-primary">Lihat pemetaan dan strategi</button>
+          <p id="barriers-status" class="workspace-feedback" role="status"></p>
         </div>
+        <div id="barriers-results"></div>
       </section>
 
       <!-- Panel Atur Tugas -->
@@ -137,7 +137,7 @@
         <div class="card">
           <h2 class="panel-title">Atur tugas &amp; target harian</h2>
           <form id="form-add-task" class="task-form">
-            <label>Target belajar <input type="text" id="task-title-input" class="form-control" placeholder="Contoh: Latihan soal Matematika Bab 2" required /></label>
+            <label>Target belajar <input type="text" id="task-title-input" class="form-control" placeholder="Contoh: Latihan soal Matematika Bab 2" maxlength="300" required /></label>
             <label>Prioritas
               <select id="task-priority-input" class="form-control">
                 <option value="Tinggi">Tinggi</option>
@@ -145,8 +145,18 @@
                 <option value="Rendah">Rendah</option>
               </select>
             </label>
-            <button type="submit" class="btn btn-primary">Tambah target</button>
+            <div class="workspace-actions">
+              <button id="task-submit" type="submit" class="btn btn-primary">Tambah target</button>
+              <button id="task-cancel" type="button" class="btn btn-outline" hidden>Batal</button>
+            </div>
           </form>
+          <div class="workspace-filters"><label>Filter tugas
+            <select id="task-filter" class="form-control">
+              <option value="all">Semua</option>
+              <option value="open">Belum selesai</option>
+              <option value="done">Selesai</option>
+            </select>
+          </label></div>
           <div id="student-task-list"></div>
         </div>
       </section>
@@ -160,16 +170,28 @@
             <button type="button" class="btn btn-outline duration-btn" data-mins="10" aria-pressed="true">10 menit</button>
             <button type="button" class="btn btn-outline duration-btn" data-mins="25" aria-pressed="false">25 menit</button>
             <button type="button" class="btn btn-outline duration-btn" data-mins="50" aria-pressed="false">50 menit</button>
+            <button type="button" class="btn btn-outline duration-btn" data-mins="custom" aria-pressed="false">Kustom</button>
+          </div>
+          <label id="focus-custom-field" class="form-group focus-topic" hidden>Durasi kustom (1–180 menit)
+            <input id="focus-custom" type="number" min="1" max="180" step="1" value="15" class="form-control" required />
+          </label>
+          <div class="form-group focus-topic">
+            <label for="focus-task">Target dari daftar tugas</label>
+            <select id="focus-task" class="form-control"><option value="">Belajar mandiri</option></select>
           </div>
           <div class="form-group focus-topic">
             <label for="focus-topic-input">Topik belajar</label>
-            <input type="text" id="focus-topic-input" class="form-control" placeholder="Contoh: Membaca bab sistem tata surya" />
+            <input type="text" id="focus-topic-input" class="form-control" maxlength="300" placeholder="Contoh: Membaca bab sistem tata surya" />
           </div>
           <div id="timer-display" class="timer-circle" role="timer" aria-label="Waktu tersisa">10:00</div>
+          <p id="focus-active-topic" class="workspace-feedback"></p>
           <div class="focus-options">
             <button type="button" id="btn-start-timer" class="btn btn-primary">Mulai sesi fokus</button>
+            <button type="button" id="btn-pause-timer" class="btn btn-outline" hidden>Jeda</button>
+            <button type="button" id="btn-finish-timer" class="btn btn-primary" hidden>Selesaikan sesi</button>
             <button type="button" id="btn-reset-timer" class="btn btn-outline">Reset</button>
           </div>
+          <p id="focus-status" class="workspace-feedback" role="status"></p>
         </div>
       </section>
 
@@ -180,15 +202,15 @@
           <form id="form-reflection">
             <div class="form-group">
               <label for="ref-learned">1. Apa yang kamu pelajari hari ini?</label>
-              <textarea id="ref-learned" class="form-control" rows="2" required></textarea>
+              <textarea id="ref-learned" class="form-control" rows="2" maxlength="3000" required></textarea>
             </div>
             <div class="form-group">
               <label for="ref-feeling">2. Bagaimana perasaan dan tingkat fokusmu saat belajar?</label>
-              <textarea id="ref-feeling" class="form-control" rows="2" required></textarea>
+              <textarea id="ref-feeling" class="form-control" rows="2" maxlength="3000" required></textarea>
             </div>
             <div class="form-group">
               <label for="ref-improvement">3. Strategi apa yang ingin kamu perbaiki pada sesi berikutnya?</label>
-              <textarea id="ref-improvement" class="form-control" rows="2" required></textarea>
+              <textarea id="ref-improvement" class="form-control" rows="2" maxlength="3000" required></textarea>
             </div>
             <button type="submit" class="btn btn-primary">Simpan Refleksi Pribadi</button>
           </form>
@@ -201,27 +223,33 @@
         <h2 class="panel-title">Jejak progres belajar</h2>
         <dl class="workspace-stats">
           <div><dt>Tugas selesai</dt><dd id="stat-tasks-done">0</dd></div>
-          <div><dt>Sesi latihan fokus</dt><dd id="stat-focus-count">0</dd></div>
+          <div><dt>Sesi latihan fokus</dt><dd id="stat-focus-count">0</dd><span id="stat-focus-minutes"></span></div>
           <div><dt>Catatan refleksi</dt><dd id="stat-reflection-count">0</dd></div>
         </dl>
 
         <div class="card" style="margin-bottom:20px;">
-          <h3 class="panel-title">Menit fokus minggu ini</h3>
+          <h3 class="panel-title">Aktivitas tujuh hari terakhir</h3>
+          <p id="activity-days" class="panel-description"></p>
           <ul id="weekly-bar-chart" class="weekly-chart"></ul>
         </div>
 
         <div class="card">
-          <h3 class="panel-title">Sinkronisasi Excel</h3>
+          <h3 class="panel-title">Privasi akun dan spreadsheet</h3>
+          <p id="student-account-info" class="panel-description"></p>
           <p class="panel-description">
-            Unduh catatan belajarmu ke file Excel (.xlsx), atau impor data tugas dari tab Atur_Tugas.
+            Isi refleksimu hanya dapat dibuka dari ruang pribadimu. Guru BK dan Admin Central bisa melihat jumlah refleksi sebagai indikator kegiatan.
+            Ekspor Excel memuat isi catatanmu, jadi simpan berkas di tempat yang aman.
           </p>
+          <p class="panel-description">Impor tugas dari tab Atur_Tugas atau CSV dengan kolom Tugas, Prioritas, dan Status. Kolom Tanggal bersifat opsional.</p>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
             <button id="btn-export-student-xlsx" class="btn btn-primary">Ekspor data ke Excel (.xlsx)</button>
             <label class="btn btn-outline file-button">
-              Impor dari Excel (.xlsx)
-              <input type="file" id="input-import-student-xlsx" accept=".xlsx,.xls" class="visually-hidden" />
+              Periksa Excel atau CSV
+              <input type="file" id="input-import-student-xlsx" accept=".xlsx,.xls,.csv" class="visually-hidden" />
             </label>
+            <button id="btn-confirm-student-import" type="button" class="btn btn-primary" hidden>Simpan tugas valid</button>
           </div>
+          <p id="student-import-report" class="workspace-feedback" role="status"></p>
         </div>
       </section>
 
@@ -238,7 +266,8 @@
             </a>
           </div>
           <div class="information-box">
-            <strong>Catatan Kerahasiaan:</strong> Layanan konsultasi bersifat sukarela dan seluruh informasi yang Anda sampaikan dijaga kerahasiaannya oleh Guru BK sesuai kode etik profesi BK.
+            <strong>Prinsip layanan</strong>
+            <p>Konsultasi bersifat sukarela dan Guru BK menjaga kerahasiaan informasi sesuai kode etik profesi BK. Sampaikan informasi yang diperlukan untuk mendapatkan pendampingan.</p>
           </div>
         </div>
       </section>
@@ -292,12 +321,13 @@
   </div>
 
   <!-- Modal Pratinjau Modul Google Drive -->
+  <!-- workspace:shared -->
   <dialog id="drive-preview-modal" class="modal-box" aria-labelledby="modal-drive-title">
     <div class="modal-header">
       <h2 id="modal-drive-title">Pratinjau modul</h2>
       <form method="dialog"><button class="btn btn-outline" autofocus>Tutup</button></form>
     </div>
-    <iframe id="modal-drive-iframe" class="modal-preview" title="Pratinjau dokumen Google Drive"></iframe>
+    <iframe id="modal-drive-iframe" class="modal-preview" title="Pratinjau dokumen Google Drive" referrerpolicy="no-referrer"></iframe>
   </dialog>
 
 </body>

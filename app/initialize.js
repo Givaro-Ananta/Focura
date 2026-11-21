@@ -6,9 +6,17 @@ import { initializeApp } from "../js/app.js";
 export default function Initialize() {
   useEffect(() => {
     const root = document.getElementById("focura");
-    if (root.dataset.initialized) return;
-    root.dataset.initialized = "true";
-    initializeApp();
+    function initialize() {
+      const button = root.querySelector("#btn-google-login");
+      if (!button || button.dataset.initialized) return;
+      button.dataset.initialized = "true";
+      void initializeApp();
+    }
+    initialize();
+    // A refresh of the server-rendered shell can replace its HTML without remounting this component.
+    const observer = new MutationObserver(initialize);
+    observer.observe(root, { childList: true });
+    return () => observer.disconnect();
   }, []);
   return null;
 }

@@ -7,6 +7,13 @@ export const demoProfile = {
   name: "Admin Central Demo",
 };
 
+export const demoProfiles = {
+  admin: demoProfile,
+  bk: { sub: "focura-demo-bk", email: "bk1@focura.test", email_verified: true, name: "Guru BK Demo 1" },
+  student: { sub: "focura-demo-siswa", email: "siswa1@focura.test", email_verified: true, name: "Siswa Demo 1" },
+  "student-other": { sub: "focura-demo-siswa-lain", email: "siswa2@focura.test", email_verified: true, name: "Siswa Demo 2" },
+};
+
 export function createDemoStore() {
   const tables = {
     Akun: [
@@ -17,7 +24,7 @@ export function createDemoStore() {
     ],
     Sekolah: [{ id: "sma-bl", name: "SMA 1 Bandar Lampung" }, { id: "sma-tp", name: "SMA 1 Talang Padang" }],
     Kelas: [{ id: "bl-xi", schoolId: "sma-bl", name: "XI" }, { id: "tp-xi", schoolId: "sma-tp", name: "XI" }],
-    TautanWali: [], Sesi: [], Belajar: [],
+    TautanWali: [], Sesi: [], Belajar: [], Modul: [], Angket: [],
   };
   const allowed = new Set([demoProfile.email, ...tables.Akun.map((account) => account.email)]);
   return {
