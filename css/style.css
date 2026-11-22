@@ -519,7 +519,84 @@ select.form-control {
 }
 
 .nav-item:focus-visible,
-.workspace-nav a:focus-visible { outline-offset: -2px; }
+.workspace-nav a:focus-visible,
+.workspace-nav-parent:focus-visible { outline-offset: -2px; }
+
+.workspace-nav-group {
+  display: block;
+}
+
+.workspace-nav-parent {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  list-style: none;
+  user-select: none;
+}
+
+.workspace-nav-parent::-webkit-details-marker { display: none; }
+.workspace-nav-parent::marker { content: ""; }
+
+.workspace-nav-parent:hover {
+  background: var(--bg-soft);
+  color: var(--text-main);
+}
+
+.workspace-nav-group:has(a[aria-current="page"]) > .workspace-nav-parent {
+  color: var(--primary-dark);
+}
+
+.workspace-nav-group[open]:has(a[aria-current="page"]) > .workspace-nav-parent {
+  color: var(--text-main);
+}
+
+.workspace-nav-chevron {
+  margin-inline-start: auto;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.workspace-nav-chevron .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.workspace-nav-group[open] .workspace-nav-chevron .ui-icon {
+  transform: rotate(180deg);
+}
+
+.workspace-nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 4px 21px;
+  padding-left: 12px;
+  border-left: 1.5px solid var(--border);
+}
+
+.workspace-nav-children a {
+  min-height: 40px;
+  padding: 7px 10px;
+  font-size: 0.845rem;
+}
+
+.workspace-nav-standalone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
 
 .main-area,
 .workspace-main {
@@ -1845,6 +1922,8 @@ th {
   .btn,
   .nav-item,
   .workspace-nav a,
+  .workspace-nav-parent,
+  .workspace-nav-chevron .ui-icon,
   .student-feature,
   .barrier-option,
   .task-row,

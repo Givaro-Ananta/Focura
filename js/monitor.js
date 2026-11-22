@@ -19,7 +19,7 @@ const pageDetails = {
   ringkasan: ["home", "Pantau sesi Guru BK dan siswa di sekolah yang terdaftar."],
   "guru-bk": ["users", "Lihat daftar Guru BK dan aktivitas login per sekolah."],
   siswa: ["user", "Pantau status sesi dan progres belajar siswa."],
-  sekolah: ["school", "Kelola sekolah dan kelas yang menggunakan Focura."],
+  sekolah: ["school", "Kelola sekolah dan kelas."],
   akun: ["lock", "Tetapkan peran dan izin login untuk akun yang terdaftar."],
   "orang-tua": ["users", "Kelola siswa yang dapat dilihat oleh setiap orang tua atau wali."],
   rpl: ["document", "Panduan pelaksanaan layanan bimbingan klasikal menggunakan Focura."],
@@ -190,6 +190,50 @@ function accountFields(form) {
   form.querySelector("[data-account-nis]").hidden = role !== "student";
 }
 
+function renderAdminNav(pages, section, workspacePath) {
+  const navLink = (href, iconName, label, active = false) =>
+    `<a href="${escapeHtml(href)}"${active ? ' aria-current="page"' : ""}>${icon(iconName)}${escapeHtml(label)}</a>`;
+  const pageItem = (slug) => ({
+    href: workspacePath(slug),
+    icon: pageDetails[slug || "ringkasan"][0],
+    label: pages[slug],
+    active: slug === section,
+  });
+  const pageLink = (slug) => {
+    const item = pageItem(slug);
+    return navLink(item.href, item.icon, item.label, item.active);
+  };
+  const navGroup = (id, iconName, label, items) => {
+    const hasActive = items.some((item) => item.active);
+    let saved = null;
+    try { saved = sessionStorage.getItem(`focura-nav:${id}`); } catch { }
+    const open = hasActive || saved === "open";
+    return `<details class="workspace-nav-group" data-nav-group="${id}"${open ? " open" : ""}>
+      <summary class="workspace-nav-parent">
+        ${icon(iconName)}<span>${escapeHtml(label)}</span>
+        <span class="workspace-nav-chevron" aria-hidden="true">${icon("chevron-down")}</span>
+      </summary>
+      <div class="workspace-nav-children">
+        ${items.map((item) => navLink(item.href, item.icon, item.label, item.active)).join("")}
+      </div>
+    </details>`;
+  };
+  return [
+    pageLink(""),
+    navGroup("pengguna", "users", "Pengguna & Akun", [
+      pageItem("akun"),
+      pageItem("guru-bk"),
+      pageItem("siswa"),
+      pageItem("orang-tua"),
+    ]),
+    navGroup("ruang", "eye", "Pratinjau Ruang", [
+      { href: "/bk", icon: "school", label: "Ruang Guru BK", active: false },
+      pageItem("pratinjau-siswa"),
+    ]),
+    `<div class="workspace-nav-standalone">${pageLink("sekolah")}${pageLink("rpl")}</div>`,
+  ].join("");
+}
+
 export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const { pages, name } = WORKSPACES[workspace];
   const central = workspace === "admin";
@@ -209,10 +253,20 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   document.getElementById("monitor-title").textContent = pages[section];
   document.getElementById("monitor-description").textContent = pageDetails[section || defaultPage][1];
   document.getElementById("admin-name-label").textContent = user.fullName;
-  nav.innerHTML = Object.entries(pages).map(([slug, label]) =>
-    `<a href="${escapeHtml(workspacePath(slug))}"${slug === section ? ' aria-current="page"' : ""}>${icon(pageDetails[slug || defaultPage][0])}${escapeHtml(label)}</a>`).join("");
-  if (central) nav.insertAdjacentHTML("beforeend", `<a href="/bk">${icon("school")}Ruang Guru BK</a>`);
-  if (centralInBk) nav.insertAdjacentHTML("beforeend", `<a href="/admin">${icon("home")}Kembali ke Admin Central</a>`);
+  if (central) {
+    nav.innerHTML = renderAdminNav(pages, section, workspacePath);
+    nav.querySelectorAll("details[data-nav-group]").forEach((group) => {
+      group.addEventListener("toggle", () => {
+        try {
+          sessionStorage.setItem(`focura-nav:${group.dataset.navGroup}`, group.open ? "open" : "closed");
+        } catch { }
+      });
+    });
+  } else {
+    nav.innerHTML = Object.entries(pages).map(([slug, label]) =>
+      `<a href="${escapeHtml(workspacePath(slug))}"${slug === section ? ' aria-current="page"' : ""}>${icon(pageDetails[slug || defaultPage][0])}${escapeHtml(label)}</a>`).join("");
+    if (centralInBk) nav.insertAdjacentHTML("beforeend", `<a href="/admin">${icon("home")}Kembali ke Admin Central</a>`);
+  }
 
   const home = document.getElementById("monitor-home");
   home.hidden = !section;
