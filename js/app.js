@@ -19,7 +19,9 @@ export async function initializeApp() {
   const button = document.getElementById("btn-google-login");
   const buttonLabel = document.getElementById("auth-button-label");
   const register = document.getElementById("btn-teacher-register");
-  const registerLabel = register.textContent;
+  const registerLabelEl = document.getElementById("teacher-register-label");
+  const registerLabel = registerLabelEl.textContent;
+  const eyebrow = document.getElementById("auth-eyebrow");
   const { demo: demoFlag, workspace, section } = document.getElementById("focura").dataset;
   const demo = demoFlag === "true";
   const demoAccount = document.getElementById("demo-account");
@@ -31,13 +33,23 @@ export async function initializeApp() {
     document.getElementById("admin-app-view")?.classList.add("hidden");
     authView.classList.remove("hidden");
     authView.classList.add("is-visible");
+    button.classList.remove("is-loading");
+    register.classList.remove("is-loading");
     buttonLabel.textContent = loginLabel();
-    register.textContent = registerLabel;
+    registerLabelEl.textContent = registerLabel;
     button.disabled = false;
     register.disabled = false;
     demoAccount.disabled = false;
   }
   if (demo) {
+    button.classList.remove("btn-google");
+    button.classList.add("btn-primary");
+    button.querySelector(".google-mark")?.classList.add("hidden");
+    button.querySelector(".auth-demo-icon")?.classList.remove("hidden");
+    if (eyebrow) {
+      eyebrow.textContent = "Mode Demo Lokal";
+      eyebrow.dataset.mode = "demo";
+    }
     document.getElementById("auth-help").textContent = "Mode demo menggunakan data contoh.";
     document.getElementById("demo-account-choice").classList.remove("hidden");
     if (workspace === "bk") {
@@ -52,7 +64,8 @@ export async function initializeApp() {
     button.disabled = true;
     register.disabled = true;
     demoAccount.disabled = true;
-    (registering ? register : buttonLabel).textContent = "Menghubungkan…";
+    (registering ? register : button).classList.add("is-loading");
+    (registering ? registerLabelEl : buttonLabel).textContent = "Menghubungkan…";
     showAuthAlert("");
     document.getElementById("auth-status").textContent = "";
     try {
