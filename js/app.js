@@ -184,7 +184,14 @@ function renderStudentDashboard(user, preview) {
   });
 
   document.getElementById("btn-student-logout").onclick = leave;
-  document.getElementById("btn-export-student-xlsx").onclick = () => exportStudentWorkbook(user);
+  document.getElementById("btn-export-student-xlsx").onclick = () => {
+    const report = document.getElementById("student-import-report");
+    try {
+      exportStudentWorkbook(user, getStudentData());
+    } catch (error) {
+      report.textContent = error.message;
+    }
+  };
   setupStudentImport();
   renderRPLSection("student-rpl-container");
   setupTaskManager();

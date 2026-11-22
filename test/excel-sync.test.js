@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { exportAdminRecapWorkbook, exportSurveyTemplate, importStudentWorkbook, importSurveyWorkbook } from "../js/excel-sync.js";
+import { exportAdminRecapWorkbook, exportStudentWorkbook, exportSurveyTemplate, importStudentWorkbook, importSurveyWorkbook } from "../js/excel-sync.js";
 
 test("Excel and CSV readers validate headers and preserve physical row numbers", async () => {
   const table = {
@@ -83,6 +83,32 @@ test("BK workbook preserves recap columns and exports only aggregate survey and 
     assert.equal(book.Rekap_Angket_Awal[1].at(-1), 1);
     assert.equal(book.Rekap_Hambatan[1][1], 1);
     assert.doesNotMatch(JSON.stringify(book), /Isi refleksi privat/);
+  } finally {
+    delete globalThis.window;
+  }
+});
+
+test("Student workbook export handles missing NIS and sanitizes unsafe filename characters", () => {
+  const saves = [];
+  globalThis.window = { XLSX: {
+    utils: {
+      book_new: () => ({}),
+      book_append_sheet: (book, rows, name) => { book[name] = rows; },
+      json_to_sheet: (rows) => rows,
+      aoa_to_sheet: (rows) => rows,
+    },
+    writeFile: (book, filename) => { saves.push({ book, filename }); },
+  } };
+  try {
+    exportStudentWorkbook(
+      { fullName: "Admin / Uji: 1", kelas: "Pratinjau Admin Central", email: "admin@focura.test" },
+      { tasks: [], focusSessions: [], reflections: [], selectedBarriers: [] }
+    );
+    assert.equal(saves.length, 1);
+    const [{ book, filename }] = saves;
+    assert.equal(filename, "Focura_Data_Admin_Uji_1.xlsx");
+    assert.doesNotMatch(filename, /undefined|[\\/:*?"<>|]/);
+    assert.deepEqual(book.Ringkasan_Siswa.find(([label]) => label === "NIS"), ["NIS", "-"]);
   } finally {
     delete globalThis.window;
   }

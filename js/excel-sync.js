@@ -4,27 +4,33 @@
  * - Menggunakan SheetJS (XLSX) yang dimuat oleh shell Next.js.
  */
 
-import { getStudentData } from "./storage.js";
 import { APP_CONFIG } from "./config.js";
 import { JAKARTA, SURVEY_ITEMS } from "./learning-rules.js";
 
 const taskColumns = ["Tugas", "Prioritas", "Status", "Tanggal"];
 const surveyColumns = ["Kode_Respons", ...Object.keys(SURVEY_ITEMS)];
 
-export function exportStudentWorkbook(user) {
+function safeFilePart(value) {
+  return String(value ?? "")
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+}
+
+export function exportStudentWorkbook(user, data) {
   if (typeof window.XLSX === "undefined") {
-    alert("Library Spreadsheet Excel belum termuat. Periksa koneksi internet Anda.");
-    return;
+    throw new Error("Library Spreadsheet Excel belum termuat. Periksa koneksi internet Anda.");
   }
 
-  const data = getStudentData();
   const wb = window.XLSX.utils.book_new();
 
   // Sheet 1: Profil & Ringkasan Progres
   const summaryRows = [
     ["FOCURA — LAPORAN PROGRES BELAJAR SISWA"],
     ["Nama Lengkap", user.fullName],
-    ["NIS", user.nis],
+    ["NIS", user.nis || "-"],
     ["Kelas", user.kelas],
     ["Email Akun", user.email],
     ["Total Tugas Selesai", data.tasks.filter((t) => t.completed).length],
@@ -71,7 +77,12 @@ export function exportStudentWorkbook(user) {
   );
   window.XLSX.utils.book_append_sheet(wb, wsRef, "Refleksi_Belajar");
 
-  window.XLSX.writeFile(wb, `Focura_Data_${user.nis}_${user.fullName.replace(/\s+/g, "_")}.xlsx`);
+  const filename = [
+    "Focura_Data",
+    user.nis ? safeFilePart(user.nis) : null,
+    safeFilePart(user.fullName) || "Siswa",
+  ].filter(Boolean).join("_") + ".xlsx";
+  window.XLSX.writeFile(wb, filename);
 }
 
 export async function importStudentWorkbook(file) {
@@ -132,7 +143,7 @@ export function exportAdminRecapWorkbook(students, summary) {
   const wb = window.XLSX.utils.book_new();
   const recapRows = students.map((student, index) => ({
     No: index + 1,
-    NIS: student.nis,
+    NIS: student.nis || "-",
     Nama_Peserta_Didik: student.fullName,
     Sekolah: student.school,
     Kelas: student.kelas,
