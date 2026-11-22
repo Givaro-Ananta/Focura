@@ -865,13 +865,44 @@ th {
 .modal-header h2 { font-size: 1rem; }
 .modal-preview { display: block; width: 100%; height: 70dvh; border: 0; }
 
-#focura[data-workspace] #auth-view:not(.is-visible) {
+#focura #auth-view:not(.is-visible) {
   display: none;
 }
 
 .workspace-loading {
-  padding: 20px 24px;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
   color: var(--text-muted);
+}
+
+.workspace-loading-card {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2.5px solid var(--primary-light);
+  border-top-color: var(--primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .loading-spinner {
+    animation: focura-spin 0.75s linear infinite;
+  }
+
+  @keyframes focura-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
 
 .workspace-sidebar {

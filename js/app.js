@@ -114,6 +114,7 @@ export async function initializeApp() {
         </article>`
       ).join("") : '<p class="workspace-empty">Belum ada akun anak yang ditautkan. Hubungi Admin Central untuk menautkan akun.</p>';
       document.getElementById("btn-guardian-logout").onclick = leave;
+      loading?.remove();
       document.getElementById("guardian-app-view").classList.remove("hidden");
     } else {
       document.getElementById("btn-admin-logout").onclick = leave;
