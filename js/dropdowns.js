@@ -32,11 +32,16 @@ export function setupDropdowns(root) {
       close();
       return;
     }
+    const maxWidth = Math.max(bounds.width, Math.min(360, window.innerWidth - 24));
+    list.style.minWidth = `${bounds.width}px`;
+    list.style.width = "max-content";
+    list.style.maxWidth = `${maxWidth}px`;
+    const listWidth = Math.min(maxWidth, list.getBoundingClientRect().width || bounds.width);
+    const left = Math.max(12, Math.min(bounds.left, window.innerWidth - listWidth - 12));
     const below = window.innerHeight - bounds.bottom - 12;
     const above = bounds.top - 12;
     const opensUp = below < Math.min(list.scrollHeight, 260) && above > below;
-    list.style.left = `${bounds.left}px`;
-    list.style.width = `${bounds.width}px`;
+    list.style.left = `${left}px`;
     list.style.top = opensUp ? "auto" : `${bounds.bottom + 6}px`;
     list.style.bottom = opensUp ? `${window.innerHeight - bounds.top + 6}px` : "auto";
     list.style.maxHeight = `${Math.max(0, Math.min(260, opensUp ? above : below))}px`;

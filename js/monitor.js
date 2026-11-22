@@ -83,12 +83,23 @@ function overview(stats) {
 }
 
 function directoryFilters(data, school, grade, showClass, searchValue = "") {
+  const schoolNames = new Map(data.schools.map(({ id, name }) => [id, name]));
+  const classChoices = showClass ? data.classes
+    .filter((entry) => !school || entry.schoolId === school)
+    .sort((a, b) => {
+      const bySchool = (schoolNames.get(a.schoolId) || "").localeCompare(schoolNames.get(b.schoolId) || "", "id-ID");
+      return bySchool || a.name.localeCompare(b.name, "id-ID", { numeric: true });
+    })
+    .map(({ id, name, schoolId }) => {
+      const schoolName = schoolNames.get(schoolId);
+      return [id, !school && schoolName ? `${name} · ${schoolName}` : name];
+    }) : [];
   return `<div class="workspace-filters">
     ${showClass ? `<label>Cari siswa<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(searchValue)}" placeholder="Nama, email, atau NIS"></label>` : ""}
     <label for="filter-school">Sekolah<select class="form-control" id="filter-school">${options([["", "Semua sekolah"], ...schoolOptions(data.schools)], school)}</select></label>
     ${showClass ? `<label for="filter-class">Kelas<select class="form-control" id="filter-class">${options([
     ["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
-    ...data.classes.filter((entry) => !school || entry.schoolId === school).map(({ id, name }) => [id, name]),
+    ...classChoices,
   ], grade)}</select></label>` : ""}
   </div>`;
 }
