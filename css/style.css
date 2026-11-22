@@ -80,6 +80,8 @@ body {
     & .focus-options .btn[aria-pressed="true"] { background: #fff; color: #163b9a; }
     & .form-control::placeholder { color: var(--text-muted); opacity: 1; }
     & .workspace-destructive { color: #ffdedb; }
+    & .icon-action-btn:hover:not(:disabled) { color: #fff; }
+    & .icon-action-btn.is-destructive:hover:not(:disabled) { color: #fecaca; }
     & .workspace-feedback[data-tone="error"] {
       background: rgb(254 226 226 / 95%);
       color: #991b1b;
@@ -1104,6 +1106,38 @@ th {
   text-decoration: underline;
 }
 
+.icon-action-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.icon-action-btn .ui-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-action-btn:hover:not(:disabled) {
+  color: var(--primary);
+}
+
+.icon-action-btn.is-destructive:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .workspace-header,
 .workspace-dialog-heading {
   display: flex;
@@ -1958,8 +1992,22 @@ th {
   .dropdown-trigger,
   .dropdown-chevron svg,
   .rpl-step,
+  .icon-action-btn,
+  .icon-action-btn .ui-icon,
   .focura-toast {
     transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .icon-action-btn:hover:not(:disabled) .ui-icon {
+    transform: scale(1.08);
+  }
+
+  .icon-action-btn:active:not(:disabled) .ui-icon {
+    transform: scale(0.94);
+  }
+
+  .icon-action-btn.is-spinning .ui-icon {
+    animation: focura-spin 550ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
   .student-feature:hover {

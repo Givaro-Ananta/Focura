@@ -324,7 +324,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const matchesSearch = (student) => matchesQuery(search, student.fullName, student.email, student.nis);
   const matchesTeacherSearch = (teacher) => matchesQuery(teacherSearch, teacher.fullName, teacher.email);
 
-  actions.innerHTML = `<button type="button" class="btn btn-outline" data-action="refresh">Muat ulang</button>
+  actions.innerHTML = `<button type="button" class="icon-action-btn" data-action="refresh" aria-label="Muat ulang" title="Muat ulang">${icon("refresh")}</button>
     ${studentsView ? '<button type="button" class="btn btn-outline" data-action="export">Ekspor Excel</button>' : ""}
     ${section === "akun" ? '<button type="button" class="btn btn-primary" data-action="add-account" disabled>Tambah akun</button>' : ""}
     ${section === "sekolah" ? '<button type="button" class="btn btn-primary" data-action="add-school">Tambah sekolah</button>' : ""}
@@ -402,9 +402,13 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     }
   }
 
-  async function refresh(message = "") {
+  async function refresh(message = "", animate = false) {
     const refreshBtn = actions.querySelector('[data-action="refresh"]');
-    if (refreshBtn) refreshBtn.disabled = true;
+    const startedAt = Date.now();
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      if (animate) refreshBtn.classList.add("is-spinning");
+    }
     content.setAttribute("aria-busy", "true");
     try {
       data = await requestDirectory(endpoint);
@@ -414,7 +418,13 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     } catch (error) {
       showToast(error.message, "error");
     } finally {
-      if (refreshBtn) refreshBtn.disabled = false;
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        if (animate) {
+          const wait = Math.max(0, 520 - (Date.now() - startedAt));
+          setTimeout(() => refreshBtn.classList.remove("is-spinning"), wait);
+        }
+      }
       content.removeAttribute("aria-busy");
     }
   }
@@ -450,7 +460,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     if (!actionButton) return;
     const { action, id, guardian, student } = actionButton.dataset;
     if (action === "refresh") {
-      await refresh("Data diperbarui.");
+      await refresh("Data diperbarui.", true);
       return;
     }
     if (!data) return;

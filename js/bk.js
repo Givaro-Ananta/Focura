@@ -51,10 +51,12 @@ export async function setupBkPage(section, { content, feedback, actions, bkApi, 
     return;
   }
 
-  actions.innerHTML = '<button type="button" class="btn btn-outline">Muat ulang</button>';
+  actions.innerHTML = '<button type="button" class="icon-action-btn" aria-label="Muat ulang" title="Muat ulang"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#refresh" /></svg></button>';
   const reload = actions.querySelector("button");
-  async function refresh() {
+  async function refresh(animate = false) {
+    const startedAt = Date.now();
     reload.disabled = true;
+    if (animate) reload.classList.add("is-spinning");
     content.setAttribute("aria-busy", "true");
     try {
       const summary = await bkApi("bk/summary");
@@ -70,10 +72,14 @@ export async function setupBkPage(section, { content, feedback, actions, bkApi, 
       showToast(error.message, "error");
     } finally {
       reload.disabled = false;
+      if (animate) {
+        const wait = Math.max(0, 520 - (Date.now() - startedAt));
+        setTimeout(() => reload.classList.remove("is-spinning"), wait);
+      }
       content.removeAttribute("aria-busy");
     }
   }
-  reload.onclick = refresh;
+  reload.onclick = () => refresh(true);
   await refresh();
 }
 
