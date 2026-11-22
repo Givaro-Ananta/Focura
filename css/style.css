@@ -20,9 +20,6 @@
   --primary-light: #eaf0ff;
   --blue-panel: #163b9a;
   --blue-panel-text: #e3ebff;
-  --secondary: #0f766e;
-  --secondary-light: #ccfbf1;
-  --accent: #f59e0b;
   --danger: #dc2626;
   --danger-light: #fee2e2;
   --success: #16a34a;
@@ -82,7 +79,6 @@ body {
     & .btn-outline:hover:not(:disabled) { background: var(--bg-soft); }
     & .focus-options .btn[aria-pressed="true"] { background: #fff; color: #163b9a; }
     & .form-control::placeholder { color: var(--text-muted); opacity: 1; }
-    & select.form-control { background-image: none; appearance: auto; padding-right: 12px; }
     & .workspace-destructive { color: #ffdedb; }
     & .workspace-feedback[data-tone="error"] {
       background: rgb(254 226 226 / 95%);
@@ -345,34 +341,6 @@ input[type="checkbox"] { accent-color: var(--primary); }
 
 #auth-status:not(:empty) { color: var(--primary-dark); background: var(--primary-light); }
 
-.auth-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  background: var(--bg-page);
-  padding: 6px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-}
-
-.auth-tab-btn {
-  border: none;
-  background: transparent;
-  padding: 10px 8px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.auth-tab-btn.active {
-  background: #ffffff;
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
-}
-
 .form-group {
   margin-bottom: 16px;
 }
@@ -409,19 +377,6 @@ select.form-control {
   background-size: 16px;
 }
 
-.consent-box {
-  background: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  margin-bottom: 16px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -451,11 +406,6 @@ select.form-control {
   background: var(--primary-dark);
 }
 
-.btn-secondary {
-  background: var(--secondary);
-  color: #ffffff;
-}
-
 .btn-outline {
   background: #ffffff;
   border: 1.5px solid var(--border);
@@ -465,11 +415,6 @@ select.form-control {
 .btn-outline:hover:not(:disabled) {
   border-color: var(--control-border);
   background: var(--bg-soft);
-}
-
-.btn-danger {
-  background: var(--danger);
-  color: #ffffff;
 }
 
 .btn-danger-solid {
@@ -505,11 +450,6 @@ select.form-control {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.sidebar.admin-theme {
-  background: #f0fdf9;
-  border-right-color: #ccfbf1;
 }
 
 .sidebar-header {
@@ -580,11 +520,6 @@ select.form-control {
 
 .nav-item:focus-visible,
 .workspace-nav a:focus-visible { outline-offset: -2px; }
-
-.admin-theme .nav-item.active {
-  background: var(--secondary-light);
-  color: var(--secondary);
-}
 
 .main-area,
 .workspace-main {
@@ -946,7 +881,10 @@ th {
 }
 
 .modal-box::backdrop,
-.workspace-dialog::backdrop { background: rgb(15 23 42 / 50%); }
+.workspace-dialog::backdrop {
+  background: rgb(15 23 42 / 50%);
+  backdrop-filter: blur(2px);
+}
 
 .modal-header {
   padding: 12px 16px;
@@ -1880,11 +1818,44 @@ th {
 #demo-account-choice:not([hidden]):not(.hidden) { display: block; }
 #demo-account { margin-top: 6px; }
 
+@media (prefers-reduced-motion: no-preference) {
+  .btn,
+  .nav-item,
+  .workspace-nav a,
+  .student-feature,
+  .barrier-option,
+  .task-row,
+  .dropdown-trigger,
+  .dropdown-chevron svg,
+  .rpl-step,
+  .focura-toast {
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .student-feature:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgb(20 33 58 / 8%);
+  }
+
+  .modal-box[open],
+  .workspace-dialog[open] {
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  @starting-style {
+    .modal-box[open],
+    .workspace-dialog[open] {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+    }
+  }
+}
+
 @page { size: A4; margin: 15mm; }
 
 @media print {
   #monitor-home, #monitor-context { display: none; }
-  #focus-island { display: none; }
+  #focus-island, .student-home-link, #monitor-feedback, #focura-toast-stack { display: none !important; }
   #student-app-view:has(#focus-island:not([hidden])) .main-area { padding-top: 0; }
   body:has(.student-panel:not(.hidden) .rpl-document, #monitor-content .rpl-document) {
     background: white;
