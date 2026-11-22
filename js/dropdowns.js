@@ -51,7 +51,7 @@ export function setupDropdowns(root) {
     }).join(" ");
     const wrapper = document.createElement("span");
     wrapper.className = "dropdown";
-    wrapper.innerHTML = `<span class="form-control dropdown-trigger" role="combobox" aria-expanded="false">
+    wrapper.innerHTML = `<span class="form-control dropdown-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false">
       <span class="dropdown-value"></span><span class="dropdown-chevron">${dropdownIcon("chevron-down")}</span>
     </span><span class="dropdown-list" role="listbox" hidden></span>`;
     const trigger = wrapper.querySelector(".dropdown-trigger");
@@ -146,7 +146,8 @@ export function setupDropdowns(root) {
       select.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    trigger.addEventListener("click", () => {
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
       trigger.focus();
       if (current === dropdown) close();
       else open();
@@ -155,6 +156,7 @@ export function setupDropdowns(root) {
       if (event.pointerType === "mouse") event.preventDefault();
     }, fieldEvents);
     list.addEventListener("click", (event) => {
+      event.preventDefault();
       const item = event.target.closest("[data-index]");
       if (item) choose(Number(item.dataset.index));
     }, fieldEvents);

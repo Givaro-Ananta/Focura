@@ -270,7 +270,7 @@
             Membutuhkan pendampingan lebih lanjut terkait hambatan konsentrasi belajar? Sampaikan keluhan atau jadwalkan sesi konseling melalui formulir resmi Guru BK berikut:
           </p>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-            <a href="https://forms.gle/SNFh7o8WdDHCGU8XA" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+            <a id="student-consultation-link" href="https://forms.gle/SNFh7o8WdDHCGU8XA" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
               Buka formulir konsultasi Guru BK
             </a>
           </div>
@@ -350,8 +350,12 @@
   <dialog id="drive-preview-modal" class="modal-box" aria-labelledby="modal-drive-title">
     <div class="modal-header">
       <h2 id="modal-drive-title">Pratinjau modul</h2>
-      <form method="dialog"><button class="btn btn-outline" autofocus>Tutup</button></form>
+      <div class="modal-header-actions">
+        <a id="modal-drive-external" class="btn btn-outline" href="#" target="_blank" rel="noopener noreferrer">Buka di Drive</a>
+        <form method="dialog"><button class="btn btn-outline" autofocus>Tutup</button></form>
+      </div>
     </div>
+    <p id="modal-drive-loading" class="modal-loading" role="status">Memuat pratinjau dokumen…</p>
     <iframe id="modal-drive-iframe" class="modal-preview" title="Pratinjau dokumen Google Drive" referrerpolicy="no-referrer"></iframe>
   </dialog>
 

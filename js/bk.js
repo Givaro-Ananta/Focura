@@ -1,7 +1,7 @@
 import { APP_CONFIG } from "./config.js";
 import { exportAdminRecapWorkbook, exportSurveyTemplate, importReportText, importSurveyWorkbook } from "./excel-sync.js";
 import { SURVEY_ITEMS } from "./learning-rules.js";
-import { escapeHtml as esc, openDriveModal, showDialog } from "./ui.js";
+import { confirmDialog, escapeHtml as esc, openDriveModal, setFeedback, showDialog } from "./ui.js";
 
 const totalsList = (items) => `<dl class="workspace-stats">${items.map(([label, total]) =>
   `<div><dt>${esc(label)}</dt><dd>${esc(total)}</dd></div>`).join("")}</dl>`;
@@ -55,9 +55,9 @@ export async function setupBkPage(section, { content, feedback, actions, bkApi, 
           <div class="workspace-actions"><a class="btn btn-primary" href="${esc(workspacePath("siswa"))}">Lihat peserta didik</a><a class="btn btn-outline" href="${esc(workspacePath("pemantauan"))}">Buka pemantauan</a></div>
         </section>`;
       content.innerHTML = `<p class="workspace-note">${esc(school)}</p>${section === "pemantauan" ? monitoring(summary, workspacePath("database")) : home}`;
-      feedback.textContent = "";
+      setFeedback(feedback, "");
     } catch (error) {
-      feedback.textContent = error.message;
+      setFeedback(feedback, error.message, "error");
     } finally {
       reload.disabled = false;
       content.removeAttribute("aria-busy");
@@ -100,11 +100,11 @@ async function setupMaterials(content, feedback, actions, bkApi) {
       try {
         await bkApi(module ? `bk/modules/${encodeURIComponent(module.id)}` : "bk/modules", module ? "PATCH" : "POST", fields);
         dialog.close();
-        feedback.textContent = "Modul disimpan.";
+        setFeedback(feedback, "Modul disimpan.", "success");
         await refresh();
         add.focus();
       } catch (error) {
-        (dialog.open ? status : feedback).textContent = error.message;
+        setFeedback(dialog.open ? status : feedback, error.message, "error");
       } finally {
         busy = event.submitter.disabled = false;
       }
@@ -118,21 +118,26 @@ async function setupMaterials(content, feedback, actions, bkApi) {
     if (!module) return;
     if (button.dataset.moduleAction === "preview") openDriveModal(module);
     else if (button.dataset.moduleAction === "edit") edit(module);
-    else if (window.confirm(`Hapus modul “${module.title}” dari daftar sekolah ini?`)) {
+    else if (await confirmDialog(content, {
+      title: "Hapus modul",
+      message: `Hapus modul “${module.title}” dari daftar sekolah ini?`,
+      confirmLabel: "Hapus modul",
+      destructive: true,
+    })) {
       busy = button.disabled = true;
       try {
         await bkApi(`bk/modules/${encodeURIComponent(module.id)}`, "DELETE");
-        feedback.textContent = "Modul dihapus dari daftar sekolah.";
+        setFeedback(feedback, "Modul dihapus dari daftar sekolah.", "success");
         await refresh();
         add.focus();
       } catch (error) {
-        feedback.textContent = error.message;
+        setFeedback(feedback, error.message, "error");
       } finally {
         busy = button.disabled = false;
       }
     }
   };
-  try { await refresh(); } catch (error) { feedback.textContent = error.message; }
+  try { await refresh(); } catch (error) { setFeedback(feedback, error.message, "error"); }
 }
 
 function setupDatabase(content, feedback, actions, bkApi) {
@@ -143,9 +148,9 @@ function setupDatabase(content, feedback, actions, bkApi) {
     try {
       const [directory, summary] = await Promise.all([bkApi("bk/students"), bkApi("bk/summary")]);
       exportAdminRecapWorkbook(directory.students, summary);
-      feedback.textContent = "Workbook rekap siap diunduh.";
+      setFeedback(feedback, "Workbook rekap siap diunduh.", "success");
     } catch (error) {
-      feedback.textContent = error.message;
+      setFeedback(feedback, error.message, "error");
     } finally {
       button.disabled = false;
     }
@@ -166,7 +171,7 @@ function setupDatabase(content, feedback, actions, bkApi) {
     </section>`;
 
   content.querySelector("#survey-template").onclick = () => {
-    try { exportSurveyTemplate(); } catch (error) { feedback.textContent = error.message; }
+    try { exportSurveyTemplate(); } catch (error) { setFeedback(feedback, error.message, "error"); }
   };
   const input = content.querySelector("#survey-file");
   const save = content.querySelector("#survey-save");
@@ -177,16 +182,16 @@ function setupDatabase(content, feedback, actions, bkApi) {
     if (!file) return;
     save.hidden = true;
     input.disabled = true;
-    status.textContent = "Memeriksa file…";
+    setFeedback(status, "Memeriksa file…", "info");
     try {
       rows = await importSurveyWorkbook(file);
       if (!rows.length) throw new Error("Belum ada respons di file ini.");
       const report = await bkApi("bk/survey", "POST", { rows, preview: true });
-      status.textContent = `${file.name} · ${importReportText(report, true)}`;
+      setFeedback(status, `${file.name} · ${importReportText(report, true)}`, report.imported ? "info" : "error");
       save.hidden = report.imported === 0;
     } catch (error) {
       rows = null;
-      status.textContent = error.message;
+      setFeedback(status, error.message, "error");
     } finally {
       input.value = "";
       input.disabled = false;
@@ -196,11 +201,11 @@ function setupDatabase(content, feedback, actions, bkApi) {
     save.disabled = input.disabled = true;
     try {
       const report = await bkApi("bk/survey", "POST", { rows });
-      status.textContent = importReportText(report);
+      setFeedback(status, importReportText(report), "success");
       rows = null;
       save.hidden = true;
     } catch (error) {
-      status.textContent = error.message;
+      setFeedback(status, error.message, "error");
     } finally {
       save.disabled = input.disabled = false;
     }

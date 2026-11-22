@@ -3,7 +3,7 @@ import { setupBkPage } from "./bk.js";
 import { exportAdminRecapWorkbook } from "./excel-sync.js";
 import { APP_CONFIG } from "./config.js";
 import { JAKARTA } from "./learning-rules.js";
-import { escapeHtml, setupMobileMenu, showDialog } from "./ui.js";
+import { confirmDialog, escapeHtml, setFeedback, setupMobileMenu, showDialog } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 const roles = { admin: "Admin Central", bk: "Guru BK", student: "Siswa", guardian: "Orang Tua/Wali" };
@@ -292,9 +292,9 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     try {
       data = await requestDirectory(endpoint);
       render();
-      feedback.textContent = message;
+      setFeedback(feedback, message, message ? "success" : "");
     } catch (error) {
-      feedback.textContent = error.message;
+      setFeedback(feedback, error.message, "error");
     } finally {
       content.removeAttribute("aria-busy");
     }
@@ -304,13 +304,13 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     if (busy) return;
     busy = true;
     const status = dialog?.querySelector(".workspace-feedback") || feedback;
-    status.textContent = "";
+    setFeedback(status, "");
     try {
       await action();
       dialog?.close();
       await refresh("Perubahan disimpan.");
     } catch (error) {
-      status.textContent = error.message;
+      setFeedback(status, error.message, "error");
     } finally {
       busy = false;
     }
@@ -330,7 +330,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
         const current = await requestDirectory(central && school ? `${endpoint}?school=${encodeURIComponent(school)}` : endpoint);
         exportAdminRecapWorkbook(current.students.filter(matchesClass).filter(matchesSearch));
       } catch (error) {
-        feedback.textContent = error.message;
+        setFeedback(feedback, error.message, "error");
       }
     } else if (action === "add-school" || action === "edit-school") {
       const selected = data.schools.find((entry) => entry.id === id);
@@ -364,7 +364,14 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
         <label>Siswa<select class="form-control" name="studentId" required>${people("student")}</select></label>
         <button type="submit" class="btn btn-primary">Tautkan wali</button></form>`);
     } else if (action === "unlink") {
-      await save(() => api("central/guardian-links", "POST", { guardianId: guardian, studentId: student, enabled: false }));
+      if (await confirmDialog(content, {
+        title: "Lepas tautan wali",
+        message: "Lepas tautan orang tua/wali dari akun siswa ini?",
+        confirmLabel: "Lepas tautan",
+        destructive: true,
+      })) {
+        await save(() => api("central/guardian-links", "POST", { guardianId: guardian, studentId: student, enabled: false }));
+      }
     }
   });
 

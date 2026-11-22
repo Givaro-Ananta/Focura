@@ -12,7 +12,7 @@ import { setupFocusTimer } from "./focus-timer.js";
 import { syncDropdown } from "./dropdowns.js";
 import { driveLinks, JAKARTA } from "./learning-rules.js";
 import { setupMonitor } from "./monitor.js";
-import { escapeHtml, openDriveModal, setupMobileMenu } from "./ui.js";
+import { confirmDialog, escapeHtml, openDriveModal, setFeedback, setupMobileMenu, showToast } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 export async function initializeApp() {
@@ -133,7 +133,7 @@ export async function initializeApp() {
 
 function leave() {
   logoutUser().catch((error) => {
-    if (!error?.redirecting) alert(error.message);
+    if (!error?.redirecting) showToast(error.message, "error");
   });
 }
 
@@ -149,7 +149,7 @@ async function saveLearning(action, values) {
   } catch (error) {
     if (error?.redirecting) return false;
     refreshStudentPanels();
-    alert(error.message);
+    showToast(error.message, "error");
     return false;
   }
 }
@@ -184,13 +184,15 @@ function renderStudentDashboard(user, preview) {
     };
   });
 
+  document.getElementById("student-consultation-link").href = APP_CONFIG.consultationFormUrl;
   document.getElementById("btn-student-logout").onclick = leave;
   document.getElementById("btn-export-student-xlsx").onclick = () => {
     const report = document.getElementById("student-import-report");
     try {
       exportStudentWorkbook(user, getStudentData());
+      showToast("File Excel progres belajar disiapkan.", "success");
     } catch (error) {
-      report.textContent = error.message;
+      setFeedback(report, error.message, "error");
     }
   };
   setupStudentImport();
@@ -212,16 +214,16 @@ function setupStudentImport() {
     if (!file) return;
     input.disabled = true;
     confirm.hidden = true;
-    status.textContent = "Memeriksa file…";
+    setFeedback(status, "Memeriksa file…", "info");
     try {
       tasks = await importStudentWorkbook(file);
       if (!tasks.length) throw new Error("Belum ada baris tugas untuk diimpor.");
       const { importReport } = await updateStudentData("importTasks", { tasks, preview: true });
-      status.textContent = `${file.name} · ${importReportText(importReport, true)}`;
+      setFeedback(status, `${file.name} · ${importReportText(importReport, true)}`, importReport.imported ? "info" : "error");
       confirm.hidden = importReport.imported === 0;
     } catch (error) {
       tasks = null;
-      status.textContent = error.message;
+      setFeedback(status, error.message, "error");
     } finally {
       input.value = "";
       input.disabled = false;
@@ -233,7 +235,7 @@ function setupStudentImport() {
     if (data) {
       tasks = null;
       confirm.hidden = true;
-      status.textContent = importReportText(data.importReport);
+      setFeedback(status, importReportText(data.importReport), "success");
     }
     input.disabled = confirm.disabled = false;
   };
@@ -376,7 +378,12 @@ function setupTaskManager() {
       submit.textContent = "Simpan perubahan";
       cancel.hidden = false;
       title.focus();
-    } else if (window.confirm(`Hapus tugas “${task.title}”?`)) {
+    } else if (await confirmDialog(document.getElementById("student-app-view"), {
+      title: "Hapus tugas",
+      message: `Hapus tugas “${task.title}” dari daftarmu?`,
+      confirmLabel: "Hapus",
+      destructive: true,
+    })) {
       button.disabled = true;
       if ((await saveLearning("deleteTask", { id })) && editId === id) reset();
       filter.focus();
@@ -416,7 +423,7 @@ function setupBarriersChecklist() {
     button.disabled = false;
     if (!saved) return;
     report(saved.selectedBarriers);
-    status.textContent = checked.length ? "Pemetaan disimpan. Strategi belajarmu tersedia di bawah." : "Pilihan dikosongkan.";
+    setFeedback(status, checked.length ? "Pemetaan disimpan. Strategi belajarmu tersedia di bawah." : "Pilihan dikosongkan.", "success");
   };
 }
 
@@ -430,7 +437,7 @@ function setupReflectionForm() {
     e.submitter.disabled = true;
     if (await saveLearning("saveReflection", { learned, feeling, improvement })) {
       e.target.reset();
-      alert("Refleksi belajar tersimpan di ruang pribadimu!");
+      showToast("Refleksi belajar tersimpan di ruang pribadimu!", "success");
     }
     e.submitter.disabled = false;
   };
