@@ -16,18 +16,18 @@ const accountStatuses = {
 };
 const schoolOptions = (schools) => schools.map(({ id, name }) => [id, name]);
 const pageDetails = {
-  ringkasan: ["home", "Pantau sesi Guru BK dan siswa di sekolah yang terdaftar."],
-  "guru-bk": ["users", "Lihat daftar Guru BK dan aktivitas login per sekolah."],
-  siswa: ["user", "Pantau status sesi dan progres belajar siswa."],
+  ringkasan: ["dashboard", "Pantau sesi Guru BK dan siswa di sekolah yang terdaftar."],
+  "guru-bk": ["counselor", "Lihat daftar Guru BK dan aktivitas login per sekolah."],
+  siswa: ["graduation-cap", "Pantau status sesi dan progres belajar siswa."],
   sekolah: ["school", "Kelola sekolah dan kelas."],
-  akun: ["lock", "Tetapkan peran dan izin login untuk akun yang terdaftar."],
-  "orang-tua": ["users", "Kelola siswa yang dapat dilihat oleh setiap orang tua atau wali."],
-  rpl: ["document", "Panduan pelaksanaan layanan bimbingan klasikal menggunakan Focura."],
+  akun: ["shield-check", "Tetapkan peran dan izin login untuk akun yang terdaftar."],
+  "orang-tua": ["guardian", "Kelola siswa yang dapat dilihat oleh setiap orang tua atau wali."],
+  rpl: ["book-guide", "Panduan pelaksanaan layanan bimbingan klasikal menggunakan Focura."],
   "beranda-bk": ["home", "Ringkasan aktivitas pendampingan."],
   pemantauan: ["chart", "Pantau aktivitas belajar, angket kebutuhan awal, dan pemetaan hambatan siswa."],
   materi: ["book", "Kelola materi Google Drive yang tersedia di sekolah penugasan."],
   database: ["document", "Ekspor rekap dan impor hasil angket kebutuhan awal."],
-  "pratinjau-siswa": ["user", "Coba fitur di ruang siswa."],
+  "pratinjau-siswa": ["monitor", "Coba fitur di ruang siswa."],
 };
 
 function icon(name) {
@@ -70,8 +70,8 @@ function overview(stats) {
   const sum = (field) => stats.reduce((total, school) => total + school[field], 0);
   return `<dl class="workspace-stats">
     <div><dt><span class="icon-tile">${icon("school")}</span>Sekolah terdaftar</dt><dd>${stats.length}</dd></div>
-    <div><dt><span class="icon-tile">${icon("users")}</span>Guru BK sedang login</dt><dd>${sum("activeTeachers")}</dd></div>
-    <div><dt><span class="icon-tile">${icon("user")}</span>Siswa sedang login</dt><dd>${sum("activeStudents")}</dd></div>
+    <div><dt><span class="icon-tile">${icon("counselor")}</span>Guru BK sedang login</dt><dd>${sum("activeTeachers")}</dd></div>
+    <div><dt><span class="icon-tile">${icon("graduation-cap")}</span>Siswa sedang login</dt><dd>${sum("activeStudents")}</dd></div>
   </dl>
   <section class="workspace-section dashboard-fill">
     <div class="workspace-section-heading"><h2>Aktivitas per sekolah</h2><p>Jumlah akun yang sedang login dari total akun terdaftar.</p></div>
@@ -227,7 +227,7 @@ function renderAdminNav(pages, section, workspacePath) {
       pageItem("orang-tua"),
     ]),
     navGroup("ruang", "eye", "Pratinjau Ruang", [
-      { href: "/bk", icon: "school", label: "Ruang Guru BK", active: false },
+      { href: "/bk", icon: "presentation", label: "Ruang Guru BK", active: false },
       pageItem("pratinjau-siswa"),
     ]),
     `<div class="workspace-nav-standalone">${pageLink("sekolah")}${pageLink("rpl")}</div>`,
