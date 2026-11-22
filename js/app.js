@@ -157,9 +157,22 @@ async function saveLearning(action, values) {
 /* ==========================================================================
    DASHBOARD SISWA (TERISOLASI PER AKUN)
    ========================================================================== */
+const STUDENT_SECTIONS = new Set(["beranda", "materi", "hambatan", "tugas", "fokus", "refleksi", "progres", "konsultasi", "rpl"]);
 let focusTimerControl;
+let studentViewListeners;
+let activeEditTaskId = null;
+
+function sectionFromHash() {
+  const id = window.location.hash.replace(/^#/, "").trim();
+  return STUDENT_SECTIONS.has(id) ? id : "beranda";
+}
 
 function renderStudentDashboard(user, preview) {
+  const studentView = document.getElementById("student-app-view");
+  studentViewListeners?.abort();
+  studentViewListeners = new AbortController();
+  const { signal } = studentViewListeners;
+
   document.getElementById("student-greeting").textContent = preview ? "Pratinjau Ruang Siswa" : `Halo, ${user.fullName}!`;
   document.getElementById("student-meta").textContent = preview
     ? "Aktivitas di halaman ini disimpan sebagai data uji milik Admin Central."
@@ -176,15 +189,21 @@ function renderStudentDashboard(user, preview) {
       if (menuToggle.offsetWidth) menuToggle.focus();
     };
   });
-  document.querySelectorAll("[data-open-section]").forEach((btn) => {
-    btn.onclick = () => {
-      const section = btn.dataset.openSection;
-      switchStudentSection(section);
-      const heading = document.getElementById("sec-" + section).querySelector("h2");
+  studentView.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-open-section]");
+    if (!btn) return;
+    const section = btn.dataset.openSection;
+    switchStudentSection(section);
+    const heading = document.getElementById("sec-" + section)?.querySelector("h2");
+    if (heading) {
       heading.tabIndex = -1;
       heading.focus();
-    };
-  });
+    }
+  }, { signal });
+  window.addEventListener("hashchange", () => {
+    if (!studentView.isConnected) return;
+    switchStudentSection(sectionFromHash(), { syncHash: false });
+  }, { signal });
 
   document.getElementById("student-consultation-link").href = APP_CONFIG.consultationFormUrl;
   document.getElementById("btn-student-logout").onclick = leave;
@@ -202,7 +221,8 @@ function renderStudentDashboard(user, preview) {
   setupTaskManager();
   setupBarriersChecklist();
   setupReflectionForm();
-  switchStudentSection("beranda");
+  refreshStudentPanels();
+  switchStudentSection(sectionFromHash(), { syncHash: false });
   focusTimerControl?.destroy();
   focusTimerControl = setupFocusTimer(refreshStudentPanels);
 }
@@ -244,35 +264,75 @@ function setupStudentImport() {
   };
 }
 
-function switchStudentSection(sectionId) {
+function switchStudentSection(sectionId, { syncHash = true, push = true } = {}) {
+  const target = STUDENT_SECTIONS.has(sectionId) ? sectionId : "beranda";
   document.getElementById("student-menu-toggle").ariaExpanded = "false";
   document.querySelectorAll(".student-panel").forEach((panel) => {
-    panel.classList.toggle("hidden", panel.id !== `sec-${sectionId}`);
+    panel.classList.toggle("hidden", panel.id !== `sec-${target}`);
   });
   document.querySelectorAll("#student-nav .nav-item").forEach((btn) => {
-    const active = btn.dataset.section === sectionId;
+    const active = btn.dataset.section === target;
     btn.classList.toggle("active", active);
     if (active) btn.setAttribute("aria-current", "page");
     else btn.removeAttribute("aria-current");
   });
-  refreshStudentPanels();
-  if (sectionId === "materi") renderDriveModules();
+  if (syncHash) {
+    const nextHash = target === "beranda" ? "" : `#${target}`;
+    if (window.location.hash !== nextHash) {
+      const nextUrl = window.location.pathname + window.location.search + nextHash;
+      if (push) window.history.pushState(null, "", nextUrl);
+      else window.history.replaceState(null, "", nextUrl);
+    }
+  }
+  if (target === "materi") renderDriveModules();
 }
 
 function refreshStudentPanels() {
   const data = getStudentData();
   const completedTasks = data.tasks.filter((t) => t.completed).length;
+  const openTasks = data.tasks.length - completedTasks;
+  const totalFocusMinutes = data.focusSessions.reduce((total, session) => total + session.durationMinutes, 0);
 
   // Update Statistik Jejak Progres
   document.getElementById("stat-tasks-done").textContent = completedTasks;
   document.getElementById("stat-focus-count").textContent = data.focusSessions.length;
-  document.getElementById("stat-focus-minutes").textContent = `${data.focusSessions.reduce((total, session) => total + session.durationMinutes, 0)} menit fokus`;
+  document.getElementById("stat-focus-minutes").textContent = `${totalFocusMinutes} menit fokus`;
   document.getElementById("stat-reflection-count").textContent = data.reflections.length;
 
   // Indikator Ketercapaian Layanan RPL (Minimal 3 dari 4 aktivitas inti)
   const criteriaDone = data.rplCount;
   document.getElementById("rpl-progress-badge").textContent = `Aktivitas RPL: ${criteriaDone} dari 4`;
   document.getElementById("rpl-progress-meter").value = criteriaDone;
+
+  const rplChecklist = document.getElementById("rpl-checklist");
+  if (rplChecklist) {
+    const steps = [
+      { section: "hambatan", label: "Kenali Hambatan", done: data.selectedBarriers.length > 0 },
+      { section: "tugas", label: "Atur Tugas", done: data.tasks.length > 0 },
+      { section: "fokus", label: "Latihan Fokus", done: data.focusSessions.length > 0 },
+      { section: "refleksi", label: "Refleksi Belajar", done: data.reflections.length > 0 },
+    ];
+    rplChecklist.innerHTML = steps.map(({ section, label, done }) => `
+      <li>
+        <button type="button" class="rpl-step${done ? " is-done" : ""}" data-open-section="${section}" aria-label="${escapeHtml(label)} (${done ? "Sudah tercapai" : "Belum tercapai"})">
+          <span class="rpl-step-mark" aria-hidden="true">${done ? "✓" : ""}</span>
+          <span>${escapeHtml(label)}</span>
+        </button>
+      </li>`).join("");
+  }
+
+  const featureMeta = {
+    materi: "Panduan belajar sekolah",
+    hambatan: data.selectedBarriers.length ? `${data.selectedBarriers.length} hambatan dipilih` : "Belum diisi",
+    tugas: data.tasks.length ? (openTasks ? `${openTasks} belum selesai` : "Semua tugas selesai") : "Belum ada target",
+    fokus: data.focusSessions.length ? `${data.focusSessions.length} sesi · ${totalFocusMinutes} menit` : "Belum ada sesi",
+    refleksi: data.reflections.length ? `${data.reflections.length} catatan tersimpan` : "Belum ada catatan",
+    konsultasi: "Sukarela & rahasia",
+  };
+  for (const [key, value] of Object.entries(featureMeta)) {
+    const metaEl = document.querySelector(`[data-feature-meta="${key}"]`);
+    if (metaEl) metaEl.textContent = value;
+  }
 
   renderTasks(data.tasks);
 
@@ -282,12 +342,14 @@ function refreshStudentPanels() {
     ? data.reflections
         .map(
           (r) => `
-      <div class="card reflection-entry">
-        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">${escapeHtml(r.date)}</div>
-        <p><strong>Dipelajari:</strong> ${escapeHtml(r.learned)}</p>
-        <p><strong>Perasaan:</strong> ${escapeHtml(r.feeling)}</p>
-        <p><strong>Rencana Perbaikan:</strong> ${escapeHtml(r.improvement)}</p>
-      </div>`
+      <article class="card reflection-entry">
+        <div class="reflection-date">${escapeHtml(r.date)}</div>
+        <dl class="reflection-body">
+          <div><dt>Dipelajari</dt><dd>${escapeHtml(r.learned)}</dd></div>
+          <div><dt>Perasaan</dt><dd>${escapeHtml(r.feeling)}</dd></div>
+          <div><dt>Rencana Perbaikan</dt><dd>${escapeHtml(r.improvement)}</dd></div>
+        </dl>
+      </article>`
         )
         .join("")
     : `<p class="workspace-empty">Belum ada catatan refleksi. Isi formulir di atas untuk menulis refleksi pertamamu.</p>`;
@@ -303,14 +365,17 @@ function refreshStudentPanels() {
   chartEl.innerHTML = activeDays ? data.activity
     .map(({ date, minutes, doneTasks }) => {
       const pct = Math.round((minutes / maxVal) * 100);
+      const hasMinutes = minutes > 0;
+      const taskOnly = !hasMinutes && doneTasks > 0;
+      const height = hasMinutes ? Math.max(8, pct) : taskOnly ? 14 : 0;
       return `
       <li>
         <div class="chart-track" aria-hidden="true">
-          <div class="chart-bar" style="height:${pct}%"></div>
+          <div class="chart-bar${taskOnly ? " is-task-only" : ""}" style="height:${height}%"></div>
         </div>
-        <strong>${escapeHtml(dayLabel.format(new Date(date)))}</strong>
-        <span>${escapeHtml(minutes)} menit</span>
-        <span class="workspace-meta">${escapeHtml(doneTasks)} tugas</span>
+        <strong>${escapeHtml(dayLabel.format(new Date(`${date}T12:00:00+07:00`)))}</strong>
+        <span class="chart-minutes">${escapeHtml(minutes)}<span class="chart-unit-full"> menit</span><span class="chart-unit-short" aria-hidden="true">m</span></span>
+        <span class="workspace-meta chart-tasks">${escapeHtml(doneTasks)}<span class="chart-unit-full"> tugas</span><span class="chart-unit-short" aria-hidden="true"> tgs</span></span>
       </li>`;
     })
     .join("") : "";
@@ -319,9 +384,15 @@ function refreshStudentPanels() {
 function renderTasks(tasks) {
   const filter = document.getElementById("task-filter").value;
   const visible = tasks.filter(({ completed }) => filter === "all" || completed === (filter === "done"));
+  const doneCount = tasks.filter((task) => task.completed).length;
+  const openCount = tasks.length - doneCount;
+  const summaryEl = document.getElementById("task-summary");
+  if (summaryEl) {
+    summaryEl.textContent = tasks.length ? `${openCount} belum selesai · ${doneCount} selesai` : "";
+  }
   const list = document.getElementById("student-task-list");
   list.innerHTML = visible.map((task) => `
-    <div class="task-row${task.completed ? " is-complete" : ""}" data-task-id="${escapeHtml(task.id)}">
+    <div class="task-row${task.completed ? " is-complete" : ""}${task.id === activeEditTaskId ? " is-editing" : ""}" data-task-id="${escapeHtml(task.id)}">
       <label><input type="checkbox"${task.completed ? " checked" : ""}/><span>${escapeHtml(task.title)}</span></label>
       <div class="workspace-actions">
         <span class="badge ${task.priority === "Tinggi" ? "badge-high" : task.priority === "Sedang" ? "badge-mid" : "badge-low"}">${escapeHtml(task.priority)}</span>
@@ -346,19 +417,26 @@ function setupTaskManager() {
   const cancel = document.getElementById("task-cancel");
   const filter = document.getElementById("task-filter");
   const list = document.getElementById("student-task-list");
-  let editId;
   const reset = () => {
-    editId = null;
+    activeEditTaskId = null;
     form.reset();
     submit.textContent = "Tambah target";
     cancel.hidden = true;
   };
-  cancel.onclick = () => { reset(); title.focus(); };
+  cancel.onclick = () => {
+    reset();
+    renderTasks(getStudentData().tasks);
+    title.focus();
+  };
   filter.onchange = () => renderTasks(getStudentData().tasks);
   form.onsubmit = async (event) => {
     event.preventDefault();
     submit.disabled = true;
-    if (await saveLearning(editId ? "editTask" : "addTask", { id: editId, title: title.value, priority: priority.value })) reset();
+    const saved = await saveLearning(activeEditTaskId ? "editTask" : "addTask", { id: activeEditTaskId, title: title.value, priority: priority.value });
+    if (saved) {
+      reset();
+      renderTasks(saved.tasks);
+    }
     submit.disabled = false;
   };
   list.addEventListener("change", async ({ target }) => {
@@ -375,12 +453,13 @@ function setupTaskManager() {
     const task = getStudentData().tasks.find((entry) => entry.id === id);
     if (!task) return;
     if (button.dataset.taskAction === "edit") {
-      editId = id;
+      activeEditTaskId = id;
       title.value = task.title;
       priority.value = task.priority;
       syncDropdown(priority);
       submit.textContent = "Simpan perubahan";
       cancel.hidden = false;
+      renderTasks(getStudentData().tasks);
       title.focus();
     } else if (await confirmDialog(document.getElementById("student-app-view"), {
       title: "Hapus tugas",
@@ -389,7 +468,12 @@ function setupTaskManager() {
       destructive: true,
     })) {
       button.disabled = true;
-      if ((await saveLearning("deleteTask", { id })) && editId === id) reset();
+      const wasEditing = activeEditTaskId === id;
+      const saved = await saveLearning("deleteTask", { id });
+      if (saved && wasEditing) {
+        reset();
+        renderTasks(saved.tasks);
+      }
       filter.focus();
     }
   });
@@ -417,9 +501,16 @@ function setupBarriersChecklist() {
     result.innerHTML = choices.length ? `<div class="card student-results"><h3>Pemetaan hambatan dan strategi</h3>
       <ul>${choices.map(({ label, explanation, tip }) => `<li><strong>${escapeHtml(label)}</strong>
         ${explanation ? `<p>${escapeHtml(explanation)}</p>` : ""}<p>${escapeHtml(tip)}</p></li>`).join("")}</ul>
-      <p>Coba satu strategi pada sesi berikutnya, lalu catat hasilnya di Refleksi Belajar. Hubungi Guru BK jika kamu membutuhkan pendampingan.</p></div>` : "";
+      <p>Coba satu strategi pada sesi berikutnya, lalu catat hasilnya di Refleksi Belajar. Hubungi Guru BK jika kamu membutuhkan pendampingan.</p>
+      <div class="workspace-actions student-results-actions">
+        <button type="button" class="btn btn-outline" data-open-section="tugas">Atur Tugas</button>
+        <button type="button" class="btn btn-primary" data-open-section="fokus">Mulai Fokus</button>
+      </div></div>` : "";
   };
   report(data.selectedBarriers);
+  container.onchange = () => {
+    setFeedback(status, "Pilihan berubah. Klik tombol di atas untuk menyimpan dan melihat strategi.", "info");
+  };
   button.onclick = async () => {
     const checked = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((el) => el.value);
     button.disabled = true;
@@ -432,15 +523,20 @@ function setupBarriersChecklist() {
 }
 
 function setupReflectionForm() {
+  const status = document.getElementById("reflection-status");
   document.getElementById("form-reflection").onsubmit = async (e) => {
     e.preventDefault();
     const learned = document.getElementById("ref-learned").value.trim();
     const feeling = document.getElementById("ref-feeling").value.trim();
     const improvement = document.getElementById("ref-improvement").value.trim();
-    if (!learned || !feeling || !improvement) return;
+    if (!learned || !feeling || !improvement) {
+      setFeedback(status, "Lengkapi ketiga kolom refleksi sebelum menyimpan.", "error");
+      return;
+    }
     e.submitter.disabled = true;
     if (await saveLearning("saveReflection", { learned, feeling, improvement })) {
       e.target.reset();
+      setFeedback(status, "Refleksi belajar tersimpan di ruang pribadimu.", "success");
       showToast("Refleksi belajar tersimpan di ruang pribadimu!", "success");
     }
     e.submitter.disabled = false;
@@ -483,15 +579,15 @@ function renderRPLSection(containerId) {
     <article class="card rpl-document dashboard-fill">
       <button type="button" class="btn btn-outline rpl-print">Cetak atau simpan PDF</button>
       <h2 class="panel-title rpl-title">${escapeHtml(rpl.judul)}</h2>
-      <div class="table-responsive" style="margin-bottom:16px;">
+      <div class="table-responsive rpl-table-wrap">
         <table>
           <tbody>
             ${rpl.identitas.map(([k, v]) => `<tr><th scope="row">${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join("")}
           </tbody>
         </table>
       </div>
-      <p style="margin-bottom:10px;"><strong>A. Rasional Layanan:</strong> ${escapeHtml(rpl.rasional)}</p>
-      <p style="margin-bottom:16px;"><strong>B. Tujuan Umum:</strong> ${escapeHtml(rpl.tujuanUmum)}</p>
+      <p class="rpl-lead"><strong>A. Rasional Layanan:</strong> ${escapeHtml(rpl.rasional)}</p>
+      <p class="rpl-lead"><strong>B. Tujuan Umum:</strong> ${escapeHtml(rpl.tujuanUmum)}</p>
       <h3>Materi pokok</h3><p>${escapeHtml(rpl.materiPokok)}</p>
       <h3 class="panel-title">C. Langkah Pelaksanaan Layanan Klasikal (2 × 45 Menit)</h3>
       <div class="table-responsive">

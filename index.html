@@ -57,7 +57,7 @@
   <div id="student-app-view" class="app-shell hidden">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <img src="/assets/svg/logo-focura.svg" alt="" />
+        <img src="/assets/svg/logo-focura.svg" alt="" width="42" height="42" />
         <div>
           <strong>Focura</strong>
           <span>Ruang Fokus Siswa</span>
@@ -69,20 +69,20 @@
       <div id="student-menu">
         <nav aria-label="Navigasi ruang siswa">
           <ul id="student-nav" class="nav-list">
-            <li><button class="nav-item active" aria-current="page" data-section="beranda"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#home" /></svg>Beranda &amp; Alur</button></li>
-            <li><button class="nav-item" data-section="materi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book" /></svg>Materi (Google Drive)</button></li>
-            <li><button class="nav-item" data-section="hambatan"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#target" /></svg>Kenali Hambatan</button></li>
-            <li><button class="nav-item" data-section="tugas"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#checklist" /></svg>Atur Tugas &amp; Target</button></li>
-            <li><button class="nav-item" data-section="fokus"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg>Mulai Fokus (Timer)</button></li>
-            <li><button class="nav-item" data-section="refleksi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg>Refleksi Belajar</button></li>
-            <li><button class="nav-item" data-section="progres"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#chart" /></svg>Jejak Progres &amp; Excel</button></li>
-            <li><button class="nav-item" data-section="konsultasi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#message" /></svg>Konsultasi Guru BK</button></li>
-            <li><button class="nav-item" data-section="rpl"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg>Dokumen RPL Klasikal</button></li>
+            <li><button type="button" class="nav-item active" aria-current="page" data-section="beranda"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#home" /></svg>Beranda &amp; Alur</button></li>
+            <li><button type="button" class="nav-item" data-section="materi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book" /></svg>Materi (Google Drive)</button></li>
+            <li><button type="button" class="nav-item" data-section="hambatan"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#target" /></svg>Kenali Hambatan</button></li>
+            <li><button type="button" class="nav-item" data-section="tugas"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#checklist" /></svg>Atur Tugas &amp; Target</button></li>
+            <li><button type="button" class="nav-item" data-section="fokus"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg>Mulai Fokus (Timer)</button></li>
+            <li><button type="button" class="nav-item" data-section="refleksi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg>Refleksi Belajar</button></li>
+            <li><button type="button" class="nav-item" data-section="progres"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#chart" /></svg>Jejak Progres &amp; Excel</button></li>
+            <li><button type="button" class="nav-item" data-section="konsultasi"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#message" /></svg>Konsultasi Guru BK</button></li>
+            <li><button type="button" class="nav-item" data-section="rpl"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg>Dokumen RPL Klasikal</button></li>
           </ul>
         </nav>
         <div class="student-account">
           <a id="student-preview-exit" class="btn btn-primary btn-block" href="/admin" hidden>Kembali ke Admin Central</a>
-          <button id="btn-student-logout" class="btn btn-outline btn-block">Keluar Akun</button>
+          <button id="btn-student-logout" type="button" class="btn btn-outline btn-block">Keluar Akun</button>
         </div>
       </div>
     </aside>
@@ -112,13 +112,14 @@
           </div>
           <p class="student-private-status"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#lock" /></svg> Ruang pribadi aktif</p>
         </div>
+        <ul id="rpl-checklist" class="rpl-checklist" aria-label="Empat indikator aktivitas RPL"></ul>
         <div class="student-feature-grid dashboard-fill" aria-label="Fitur belajar">
-          <button class="card student-feature" type="button" data-open-section="tugas"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#checklist" /></svg></span><strong>Atur Tugas</strong><span>Susun target dan tentukan prioritas harianmu.</span></button>
-          <button class="card student-feature" type="button" data-open-section="fokus"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg></span><strong>Mulai Fokus</strong><span>Latih perhatian dengan timer untuk satu target belajar.</span></button>
-          <button class="card student-feature" type="button" data-open-section="materi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book" /></svg></span><strong>Materi dan Modul Drive</strong><span>Baca panduan belajar yang tersedia di sekolahmu.</span></button>
-          <button class="card student-feature" type="button" data-open-section="refleksi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg></span><strong>Refleksi Belajar</strong><span>Catat pengalaman dan rencana perbaikan secara pribadi.</span></button>
-          <button class="card student-feature" type="button" data-open-section="hambatan"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#target" /></svg></span><strong>Kenali Hambatan</strong><span>Pilih situasi yang mengganggu fokus dan coba strateginya.</span></button>
-          <button class="card student-feature" type="button" data-open-section="konsultasi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#message" /></svg></span><strong>Konsultasi Guru BK</strong><span>Ajukan pendampingan belajar secara sukarela.</span></button>
+          <button class="card student-feature" type="button" data-open-section="materi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book" /></svg></span><strong>1. Materi dan Modul Drive</strong><span>Baca panduan belajar yang tersedia di sekolahmu.</span><span class="feature-meta" data-feature-meta="materi"></span></button>
+          <button class="card student-feature" type="button" data-open-section="hambatan"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#target" /></svg></span><strong>2. Kenali Hambatan</strong><span>Pilih situasi yang mengganggu fokus dan coba strateginya.</span><span class="feature-meta" data-feature-meta="hambatan"></span></button>
+          <button class="card student-feature" type="button" data-open-section="tugas"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#checklist" /></svg></span><strong>3. Atur Tugas</strong><span>Susun target dan tentukan prioritas harianmu.</span><span class="feature-meta" data-feature-meta="tugas"></span></button>
+          <button class="card student-feature" type="button" data-open-section="fokus"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#timer" /></svg></span><strong>4. Mulai Fokus</strong><span>Latih perhatian dengan timer untuk satu target belajar.</span><span class="feature-meta" data-feature-meta="fokus"></span></button>
+          <button class="card student-feature" type="button" data-open-section="refleksi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#document" /></svg></span><strong>5. Refleksi Belajar</strong><span>Catat pengalaman dan rencana perbaikan secara pribadi.</span><span class="feature-meta" data-feature-meta="refleksi"></span></button>
+          <button class="card student-feature" type="button" data-open-section="konsultasi"><span class="icon-tile"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#message" /></svg></span><strong>6. Konsultasi Guru BK</strong><span>Ajukan pendampingan belajar secara sukarela.</span><span class="feature-meta" data-feature-meta="konsultasi"></span></button>
         </div>
       </section>
 
@@ -165,7 +166,8 @@
               <option value="open">Belum selesai</option>
               <option value="done">Selesai</option>
             </select>
-          </label></div>
+          </label>
+          <p id="task-summary" class="workspace-meta task-summary"></p></div>
           <div id="student-task-list"></div>
         </div>
       </section>
@@ -213,7 +215,7 @@
 
       <!-- Panel Refleksi Belajar -->
       <section id="sec-refleksi" class="student-panel hidden">
-        <div class="card dashboard-fill" style="margin-bottom:20px;">
+        <div class="card dashboard-fill card-spaced">
           <h2 class="panel-title">Refleksi pengalaman belajar</h2>
           <form id="form-reflection">
             <div class="form-group">
@@ -229,6 +231,7 @@
               <textarea id="ref-improvement" class="form-control" rows="2" maxlength="3000" required></textarea>
             </div>
             <button type="submit" class="btn btn-primary">Simpan Refleksi Pribadi</button>
+            <p id="reflection-status" class="workspace-feedback" role="status"></p>
           </form>
         </div>
         <div id="student-reflection-history"></div>
@@ -243,7 +246,7 @@
           <div><dt>Catatan refleksi</dt><dd id="stat-reflection-count">0</dd></div>
         </dl>
 
-        <div class="card" style="margin-bottom:20px;">
+        <div class="card card-spaced">
           <h3 class="panel-title">Aktivitas tujuh hari terakhir</h3>
           <p id="activity-days" class="panel-description"></p>
           <ul id="weekly-bar-chart" class="weekly-chart"></ul>
@@ -257,8 +260,8 @@
             Ekspor Excel memuat isi catatanmu, jadi simpan berkas di tempat yang aman.
           </p>
           <p class="panel-description">Impor tugas dari tab Atur_Tugas atau CSV dengan kolom Tugas, Prioritas, dan Status. Kolom Tanggal bersifat opsional.</p>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-            <button id="btn-export-student-xlsx" class="btn btn-primary">Ekspor data ke Excel (.xlsx)</button>
+          <div class="workspace-actions">
+            <button id="btn-export-student-xlsx" type="button" class="btn btn-primary">Ekspor data ke Excel (.xlsx)</button>
             <label class="btn btn-outline file-button">
               Periksa Excel atau CSV
               <input type="file" id="input-import-student-xlsx" accept=".xlsx,.xls,.csv" class="visually-hidden" />
@@ -276,7 +279,7 @@
           <p class="panel-description">
             Membutuhkan pendampingan lebih lanjut terkait hambatan konsentrasi belajar? Sampaikan keluhan atau jadwalkan sesi konseling melalui formulir resmi Guru BK berikut:
           </p>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+          <div class="workspace-actions card-spaced">
             <a id="student-consultation-link" href="https://forms.gle/SNFh7o8WdDHCGU8XA" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
               Buka formulir konsultasi Guru BK
             </a>
@@ -341,10 +344,10 @@
   <div id="guardian-app-view" class="app-shell hidden">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <img src="/assets/svg/logo-focura.svg" alt="" />
+        <img src="/assets/svg/logo-focura.svg" alt="" width="42" height="42" />
         <div><strong>Focura</strong><span>Ruang Orang Tua/Wali</span></div>
       </div>
-      <button id="btn-guardian-logout" class="btn btn-outline btn-block">Keluar Akun</button>
+      <button id="btn-guardian-logout" type="button" class="btn btn-outline btn-block">Keluar Akun</button>
     </aside>
     <main class="main-area">
       <header class="topbar"><div><h1>Informasi anak</h1><p class="page-description">Lihat sekolah dan kelas anak yang terhubung dengan akunmu.</p></div></header>

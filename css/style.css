@@ -71,6 +71,11 @@ body {
       background: #fff;
       color: #163b9a;
     }
+    & .rpl-step { background: var(--bg-card); border-color: var(--border); color: var(--text-main); }
+    & .rpl-step.is-done { background: #fff; border-color: #fff; color: #163b9a; }
+    & .rpl-step.is-done .rpl-step-mark { background: #16a34a; border-color: #16a34a; color: #fff; }
+    & .feature-meta { color: var(--text-muted); }
+    & .chart-bar.is-task-only { background: var(--primary-light); }
     & :is(.btn-primary, #btn-pause-timer, #btn-reset-timer):hover:not(:disabled),
     & .student-private-status { background: #eaf0ff; }
     & .btn-outline { background: var(--bg-card); }
@@ -647,6 +652,10 @@ select.form-control {
   box-shadow: var(--shadow-sm);
 }
 
+.card-spaced {
+  margin-bottom: 20px;
+}
+
 .student-progress {
   min-width: 164px;
   display: grid;
@@ -726,6 +735,8 @@ select.form-control {
 .task-row label { display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; overflow-wrap: anywhere; }
 .task-row.is-complete { background: var(--bg-soft); }
 .task-row.is-complete label span { text-decoration: line-through; }
+.task-row.is-editing { border-color: var(--primary); background: var(--primary-light); }
+.task-summary { margin: 0 0 0 auto; }
 .task-row input, .barrier-option input { flex: none; width: 17px; height: 17px; }
 .barrier-option { padding-block: 14px; align-items: flex-start; cursor: pointer; }
 .barrier-option:has(input:checked) { border-color: var(--primary); background: var(--primary-light); }
@@ -746,8 +757,21 @@ select.form-control {
 
 .chart-track { display: flex; align-items: flex-end; height: 120px; border-radius: 7px; background: var(--bg-soft); }
 .chart-bar { width: 100%; border-radius: 7px; background: var(--primary); }
+.chart-bar.is-task-only { background: #94b3f6; }
 .weekly-chart strong { display: block; margin-top: 6px; }
 .weekly-chart span { color: var(--text-muted); }
+.chart-unit-short { display: none; }
+
+@container dashboard (max-width: 30rem) {
+  .weekly-chart {
+    font-size: 0.72rem;
+    gap: 4px;
+  }
+  .chart-track { height: 96px; }
+  .weekly-chart strong { font-size: 0.7rem; line-height: 1.2; }
+  .chart-unit-full { display: none; }
+  .chart-unit-short { display: inline; }
+}
 
 .badge {
   display: inline-block;
@@ -1585,6 +1609,60 @@ th {
   font-size: 0.875rem;
 }
 
+.rpl-checklist {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin-bottom: 20px;
+}
+
+.rpl-step {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rpl-step:hover {
+  border-color: var(--primary);
+}
+
+.rpl-step.is-done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.rpl-step-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--control-border);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.rpl-step.is-done .rpl-step-mark {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+}
+
 .student-feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1606,19 +1684,36 @@ th {
 
 .student-feature > .icon-tile { grid-row: span 2; }
 .student-feature:hover { border-color: var(--primary); }
-.student-feature > span:last-child { color: var(--text-muted); font-size: 0.9375rem; }
+.student-feature > span:not(.icon-tile):not(.feature-meta) { color: var(--text-muted); font-size: 0.9375rem; }
+.feature-meta {
+  grid-column: 2;
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--primary-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.feature-meta:empty { display: none; }
 
 @container (max-width: 56rem) {
   .student-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rpl-checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @container (max-width: 36rem) {
   .student-feature-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; gap: 12px; }
+  .rpl-checklist { grid-template-columns: minmax(0, 1fr); }
 }
 
 .student-results, .bk-activity { margin-top: 20px; }
+.student-results-actions { margin-top: 14px; }
 .reflection-entry { padding: 16px; }
 .reflection-entry + .reflection-entry { margin-top: 12px; }
+.reflection-date { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 10px; font-weight: 600; }
+.reflection-body { display: grid; gap: 8px; }
+.reflection-body dt { font-weight: 700; font-size: 0.875rem; color: var(--text-main); }
+.reflection-body dd { color: var(--text-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+#reflection-status { margin-top: 12px; margin-bottom: 0; }
 .student-results ul { list-style: none; margin-block: 12px; }
 .student-results li { border-bottom: 1px solid var(--border); padding-block: 12px; }
 .student-results li p + p { margin-top: 4px; }
@@ -1633,12 +1728,14 @@ th {
   @container dashboard (min-width: 56rem) {
     .student-feature {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto auto minmax(3em, auto);
+      grid-template-rows: auto auto minmax(3em, auto) auto;
       align-content: center;
       justify-items: start;
       gap: 8px;
       padding: clamp(24px, 2.5cqi, 40px);
     }
+
+    .feature-meta { grid-column: auto; }
 
     .student-feature > .icon-tile,
     .dashboard-fill > .guardian-card .icon-tile {
@@ -1666,7 +1763,7 @@ th {
       line-height: 1.25;
     }
 
-    .student-feature > span:last-child {
+    .student-feature > span:not(.icon-tile):not(.feature-meta) {
       max-inline-size: 38ch;
       font-size: clamp(1rem, 1.12cqi, 1.125rem);
     }
@@ -1722,6 +1819,8 @@ th {
 .survey-columns dt { font-weight: 700; }
 .survey-columns dd { color: var(--text-muted); }
 .rpl-print { margin-bottom: 16px; }
+.rpl-table-wrap { margin-bottom: 16px; }
+.rpl-lead { margin-bottom: 12px; }
 .rpl-document h3 { margin-block: 16px 6px; }
 .rpl-document th { overflow-wrap: anywhere; }
 #survey-status, #student-import-report { margin-top: 12px; overflow-wrap: anywhere; }
