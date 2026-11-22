@@ -575,18 +575,46 @@ select.form-control {
 }
 
 .workspace-nav-children {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin: 4px 0 4px 21px;
-  padding-left: 12px;
-  border-left: 1.5px solid var(--border);
+  margin: 2px 0 4px 21px;
+  padding-left: 16px;
 }
 
 .workspace-nav-children a {
+  position: relative;
   min-height: 40px;
   padding: 7px 10px;
   font-size: 0.845rem;
+}
+
+.workspace-nav-children a::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: -4px;
+  width: 14px;
+  height: calc(50% + 4px);
+  border-left: 1.5px solid #cbd5e1;
+  border-bottom: 1.5px solid #cbd5e1;
+  pointer-events: none;
+}
+
+.workspace-nav-children a:first-child::before {
+  top: -6px;
+  height: calc(50% + 6px);
+}
+
+.workspace-nav-children a:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  bottom: -4px;
+  border-left: 1.5px solid #cbd5e1;
+  pointer-events: none;
 }
 
 .workspace-nav-standalone {
