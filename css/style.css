@@ -394,6 +394,11 @@ select.form-control {
   text-decoration: none;
 }
 
+.btn .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .btn:disabled {
   opacity: 0.58;
   cursor: not-allowed;
@@ -1418,6 +1423,11 @@ th {
   color: var(--text-muted);
 }
 
+.workspace-table .icon-action-btn {
+  width: 36px;
+  height: 36px;
+}
+
 .workspace-dialog {
   width: min(440px, calc(100% - 28px));
   max-height: calc(100% - 28px);
@@ -1454,6 +1464,77 @@ th {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+
+.dialog-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--bg-soft);
+}
+
+.dialog-mode-switch label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dialog-mode-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dialog-mode-switch label:has(input:checked) {
+  background: var(--bg-card);
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+.dialog-mode-switch label:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dialog-mode-switch label:has(input:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.school-class-list {
+  display: grid;
+  gap: 6px;
+}
+
+.school-class-label {
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--text-main);
+}
+
+.school-class-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+}
+
+.school-class-chips li {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-main);
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 
 .workspace-destructive {

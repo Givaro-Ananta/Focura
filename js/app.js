@@ -397,8 +397,8 @@ function renderTasks(tasks) {
       <label><input type="checkbox"${task.completed ? " checked" : ""}/><span>${escapeHtml(task.title)}</span></label>
       <div class="workspace-actions">
         <span class="badge ${task.priority === "Tinggi" ? "badge-high" : task.priority === "Sedang" ? "badge-mid" : "badge-low"}">${escapeHtml(task.priority)}</span>
-        <button type="button" class="workspace-row-action" data-task-action="edit" aria-label="Ubah ${escapeHtml(task.title)}">Ubah</button>
-        <button type="button" class="workspace-row-action workspace-destructive" data-task-action="delete" aria-label="Hapus ${escapeHtml(task.title)}">Hapus</button>
+        <button type="button" class="icon-action-btn" data-task-action="edit" aria-label="Edit ${escapeHtml(task.title)}" title="Edit"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#pencil" /></svg></button>
+        <button type="button" class="icon-action-btn is-destructive" data-task-action="delete" aria-label="Hapus ${escapeHtml(task.title)}" title="Hapus"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#trash" /></svg></button>
       </div>
     </div>`).join("") || '<p class="workspace-empty">Tidak ada tugas pada filter ini.</p>';
 

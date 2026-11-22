@@ -5,6 +5,7 @@ import { confirmDialog, escapeHtml as esc, openDriveModal, setFeedback, showDial
 
 const totalsList = (items) => `<dl class="workspace-stats">${items.map(([label, total]) =>
   `<div><dt>${esc(label)}</dt><dd>${esc(total)}</dd></div>`).join("")}</dl>`;
+const svgIcon = (name) => `<svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#${name}" /></svg>`;
 
 const scoreFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 });
 
@@ -84,7 +85,7 @@ export async function setupBkPage(section, { content, feedback, actions, bkApi, 
 }
 
 async function setupMaterials(content, feedback, actions, bkApi) {
-  actions.innerHTML = '<button type="button" class="btn btn-primary">Tambah modul</button>';
+  actions.innerHTML = `<button type="button" class="btn btn-primary">${svgIcon("plus")}Tambah</button>`;
   const add = actions.querySelector("button");
   let modules = [];
   let busy = false;
@@ -95,9 +96,9 @@ async function setupMaterials(content, feedback, actions, bkApi) {
         <div>${module.category ? `<p class="workspace-meta">${esc(module.category)}</p>` : ""}
         <h2>${esc(module.title)}</h2><p>${esc(module.description)}</p></div>
         <div class="workspace-actions">
-          <button type="button" class="btn btn-outline" data-module-action="preview">Pratinjau</button>
-          <button type="button" class="workspace-row-action" data-module-action="edit">Ubah</button>
-          <button type="button" class="workspace-row-action workspace-destructive" data-module-action="remove">Hapus</button>
+          <button type="button" class="icon-action-btn" data-module-action="preview" aria-label="Pratinjau ${esc(module.title)}" title="Pratinjau">${svgIcon("eye")}</button>
+          <button type="button" class="icon-action-btn" data-module-action="edit" aria-label="Edit ${esc(module.title)}" title="Edit">${svgIcon("pencil")}</button>
+          <button type="button" class="icon-action-btn is-destructive" data-module-action="remove" aria-label="Hapus ${esc(module.title)}" title="Hapus">${svgIcon("trash")}</button>
         </div></article>`).join("") || '<p class="workspace-empty">Belum ada modul yang tersedia.</p>'}</div>`;
   }
   function edit(module) {
@@ -158,7 +159,7 @@ async function setupMaterials(content, feedback, actions, bkApi) {
 }
 
 function setupDatabase(content, feedback, actions, bkApi) {
-  actions.innerHTML = '<button type="button" class="btn btn-primary">Ekspor workbook Excel</button>';
+  actions.innerHTML = `<button type="button" class="btn btn-primary">${svgIcon("download")}Ekspor Rekap</button>`;
   actions.querySelector("button").onclick = async (event) => {
     const button = event.currentTarget;
     button.disabled = true;

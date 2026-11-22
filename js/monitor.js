@@ -52,8 +52,8 @@ function table(headers, rows, empty) {
     </tbody></table></div>`;
 }
 
-function rowAction(action, label, id = "") {
-  return `<button type="button" class="workspace-row-action" data-action="${action}" data-id="${escapeHtml(id)}">${label}</button>`;
+function iconAction(action, iconName, label, { id = "", destructive = false, attrs = "" } = {}) {
+  return `<button type="button" class="icon-action-btn${destructive ? " is-destructive" : ""}" data-action="${action}" data-id="${escapeHtml(id)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"${attrs}>${icon(iconName)}</button>`;
 }
 
 function identity(name, description) {
@@ -75,9 +75,9 @@ function overview(stats) {
   </dl>
   <section class="workspace-section dashboard-fill">
     <div class="workspace-section-heading"><h2>Aktivitas per sekolah</h2><p>Jumlah akun yang sedang login dari total akun terdaftar.</p></div>
-    ${table(["Sekolah", "Guru BK login / terdaftar", "Siswa login / terdaftar", "Daftar siswa"], stats.map((school) => [
+    ${table(["Sekolah", "Guru BK login / terdaftar", "Siswa login / terdaftar", "Siswa"], stats.map((school) => [
     identity(school.name), `${school.activeTeachers} / ${school.teachers}`, `${school.activeStudents} / ${school.students}`,
-    `<a class="workspace-row-action" href="/admin/siswa?sekolah=${encodeURIComponent(school.id)}">Lihat siswa</a>`,
+    `<a class="icon-action-btn" href="/admin/siswa?sekolah=${encodeURIComponent(school.id)}" aria-label="Lihat siswa ${escapeHtml(school.name)}" title="Lihat siswa">${icon("arrow-right")}</a>`,
   ]), "Belum ada sekolah. Tambahkan sekolah melalui menu Sekolah & Kelas.")}
   </section>`;
 }
@@ -105,10 +105,13 @@ function directoryFilters(data, school, grade, showClass, searchValue = "") {
 }
 
 function schoolDirectory(data) {
-  return table(["Sekolah", "Kelas", "Tindakan"], data.schools.map((school) => {
+  return table(["Sekolah", "Kelas", "Edit"], data.schools.map((school) => {
     const classes = data.classes.filter(({ schoolId }) => schoolId === school.id);
-    return [identity(school.name), escapeHtml(classes.map(({ name }) => name).join(", ") || "Belum ada kelas"),
-    `<div class="workspace-actions">${rowAction("edit-school", "Ubah nama", school.id)}${rowAction("add-class", "Tambah kelas", school.id)}</div>`];
+    return [
+      identity(school.name),
+      escapeHtml(classes.map(({ name }) => name).join(", ") || "Belum ada kelas"),
+      iconAction("edit-school", "pencil", `Edit ${school.name}`, { id: school.id }),
+    ];
   }), "Belum ada sekolah.");
 }
 
@@ -142,13 +145,17 @@ function accountRows(data, role, status, query) {
       return [
         identity(account.fullName, account.email), escapeHtml(roles[account.role]),
         accountBadge(statusKey),
-        rowAction("edit-account", account.registrationPending ? "Tinjau pendaftaran" : "Kelola", account.email),
+        iconAction("edit-account", account.registrationPending ? "user-check" : "pencil",
+          account.registrationPending ? `Tinjau pendaftaran ${account.fullName}` : `Edit akun ${account.fullName}`, { id: account.email }),
       ];
     });
   if (!role && (!status || status === "unprofiled")) {
     for (const email of data.pendingEmails) {
       if (matchesQuery(email)) {
-        rows.push([identity(email), "—", accountBadge("unprofiled"), rowAction("edit-account", "Buat profil", email)]);
+        rows.push([
+          identity(email), "—", accountBadge("unprofiled"),
+          iconAction("edit-account", "user-plus", `Buat profil ${email}`, { id: email }),
+        ]);
       }
     }
   }
@@ -159,9 +166,12 @@ function accountRows(data, role, status, query) {
 
 function guardianDirectory(data) {
   const names = new Map(data.accounts.map(({ id, fullName, email }) => [id, identity(fullName, email)]));
-  return table(["Orang tua/wali", "Siswa", "Tindakan"], data.links.map(({ guardianId, studentId }) => [
+  return table(["Orang tua/wali", "Siswa", "Lepas"], data.links.map(({ guardianId, studentId }) => [
     names.get(guardianId), names.get(studentId),
-    `<button type="button" class="workspace-row-action" data-action="unlink" data-guardian="${escapeHtml(guardianId)}" data-student="${escapeHtml(studentId)}">Lepas tautan</button>`,
+    iconAction("unlink", "unlink", "Lepas tautan", {
+      destructive: true,
+      attrs: ` data-guardian="${escapeHtml(guardianId)}" data-student="${escapeHtml(studentId)}"`,
+    }),
   ]), "Belum ada wali yang ditautkan ke siswa.");
 }
 
@@ -188,6 +198,15 @@ function accountFields(form) {
   form.querySelector("[data-account-school]").hidden = !requiresSchool;
   form.elements.schoolId.required = requiresSchool;
   form.querySelector("[data-account-nis]").hidden = role !== "student";
+}
+
+function addSchoolOrClassFields(form) {
+  const addClass = form.elements.kind.value === "class";
+  form.querySelector("[data-add-school]").hidden = addClass;
+  form.querySelector("[data-add-class]").hidden = !addClass;
+  form.elements.schoolName.required = !addClass;
+  form.elements.schoolId.required = addClass;
+  form.elements.className.required = addClass;
 }
 
 function renderAdminNav(pages, section, workspacePath) {
@@ -325,10 +344,10 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const matchesTeacherSearch = (teacher) => matchesQuery(teacherSearch, teacher.fullName, teacher.email);
 
   actions.innerHTML = `<button type="button" class="icon-action-btn" data-action="refresh" aria-label="Muat ulang" title="Muat ulang">${icon("refresh")}</button>
-    ${studentsView ? '<button type="button" class="btn btn-outline" data-action="export">Ekspor Excel</button>' : ""}
-    ${section === "akun" ? '<button type="button" class="btn btn-primary" data-action="add-account" disabled>Tambah akun</button>' : ""}
-    ${section === "sekolah" ? '<button type="button" class="btn btn-primary" data-action="add-school">Tambah sekolah</button>' : ""}
-    ${section === "orang-tua" ? '<button type="button" class="btn btn-primary" data-action="link" disabled>Tautkan wali</button>' : ""}`;
+    ${studentsView ? `<button type="button" class="btn btn-outline" data-action="export">${icon("download")}Ekspor</button>` : ""}
+    ${section === "akun" ? `<button type="button" class="btn btn-primary" data-action="add-account" disabled>${icon("plus")}Tambah</button>` : ""}
+    ${section === "sekolah" ? `<button type="button" class="btn btn-primary" data-action="add-school-or-class">${icon("plus")}Tambah</button>` : ""}
+    ${section === "orang-tua" ? `<button type="button" class="btn btn-primary" data-action="link" disabled>${icon("link")}Tautkan</button>` : ""}`;
 
   function setCount(shown, total, noun) {
     const countEl = document.getElementById("directory-count");
@@ -339,13 +358,13 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     const students = data.students.filter(matchesSchool).filter(matchesClass).filter(matchesSearch);
     setCount(students.length, data.students.length, central ? "siswa" : "peserta didik");
     document.getElementById("directory-results").innerHTML = central
-      ? table(["Siswa", "Sekolah dan kelas", "Status sesi", "Progres", "Tindakan"],
+      ? table(["Siswa", "Sekolah dan kelas", "Status sesi", "Progres", "Edit"],
         students.map((student) => [
           identity(student.fullName, student.nis ? `NIS ${student.nis}` : ""),
           identity(student.kelas, student.school),
           sessionStatus(student),
           `${student.focusCount} sesi · ${student.reflectionCount} refleksi<span class="workspace-meta">${student.rplCount}/4 indikator RPL</span>`,
-          rowAction("edit-class", "Ubah kelas", student.id),
+          iconAction("edit-class", "pencil", `Ubah kelas ${student.fullName}`, { id: student.id }),
         ]), "Tidak ada siswa dalam daftar ini.")
       : table(["Peserta didik", "Kelas", "Aktivitas RPL", "Sesi fokus", "Privasi refleksi", "Status sesi"], students.map((student) => [
         identity(student.fullName, student.email),
@@ -368,7 +387,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   function renderAccountRows() {
     const { rows, total, empty } = accountRows(data, accountRole, accountState, accountSearch);
     setCount(rows.length, total, "akun");
-    document.getElementById("directory-results").innerHTML = table(["Akun", "Peran", "Status akun", "Tindakan"], rows, empty);
+    document.getElementById("directory-results").innerHTML = table(["Akun", "Peran", "Status akun", "Edit"], rows, empty);
   }
 
   function render() {
@@ -475,17 +494,35 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       } finally {
         actionButton.disabled = false;
       }
-    } else if (action === "add-school" || action === "edit-school") {
+    } else if (action === "add-school-or-class") {
+      showDialog(content, "Tambah sekolah atau kelas", `<form class="workspace-form" data-operation="school-or-class">
+        <div class="dialog-mode-switch" role="radiogroup" aria-label="Jenis data">
+          <label><input type="radio" name="kind" value="school" checked><span>Sekolah</span></label>
+          <label><input type="radio" name="kind" value="class"${data.schools.length ? "" : " disabled"}><span>Kelas</span></label>
+        </div>
+        <label data-add-school>Nama sekolah<input class="form-control" name="schoolName" required maxlength="120"></label>
+        <div data-add-class class="workspace-form" hidden>
+          <label>Sekolah<select class="form-control" name="schoolId">${options([["", "Pilih sekolah"], ...schoolOptions(data.schools)])}</select></label>
+          <label>Nama kelas<input class="form-control" name="className" maxlength="80"></label>
+        </div>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </form>`);
+      addSchoolOrClassFields(content.querySelector('form[data-operation="school-or-class"]'));
+    } else if (action === "edit-school") {
       const selected = data.schools.find((entry) => entry.id === id);
-      showDialog(content, selected ? "Ubah nama sekolah" : "Tambah sekolah", `<form class="workspace-form" data-operation="school" data-id="${escapeHtml(id)}">
-        <label>Nama sekolah<input class="form-control" name="name" required maxlength="120" value="${escapeHtml(selected?.name)}"></label>
-        <button type="submit" class="btn btn-primary">Simpan sekolah</button></form>`);
-    } else if (action === "add-class") {
-      const selected = data.schools.find((entry) => entry.id === id);
-      showDialog(content, "Tambah kelas", `<form class="workspace-form" data-operation="newClass" data-id="${escapeHtml(id)}">
-        <p>${escapeHtml(selected.name)}</p>
-        <label>Nama kelas<input class="form-control" name="name" required maxlength="80"></label>
-        <button type="submit" class="btn btn-primary">Simpan kelas</button></form>`);
+      if (!selected) return;
+      const schoolClasses = data.classes.filter((entry) => entry.schoolId === id);
+      showDialog(content, "Edit sekolah & kelas", `<form class="workspace-form" data-operation="school-edit" data-id="${escapeHtml(id)}">
+        <label>Nama sekolah<input class="form-control" name="name" required maxlength="120" value="${escapeHtml(selected.name)}"></label>
+        <div class="school-class-list">
+          <span class="school-class-label">Kelas terdaftar</span>
+          ${schoolClasses.length
+            ? `<ul class="school-class-chips">${schoolClasses.map((entry) => `<li>${escapeHtml(entry.name)}</li>`).join("")}</ul>`
+            : '<p class="workspace-meta">Belum ada kelas terdaftar.</p>'}
+        </div>
+        <label>Tambah kelas baru (opsional)<input class="form-control" name="newClassName" maxlength="80" placeholder="Contoh: XII IPA 1"></label>
+        <button type="submit" class="btn btn-primary">Simpan perubahan</button>
+      </form>`);
     } else if (action === "add-account" || action === "edit-account") {
       const pending = data.accounts.some(({ email, registrationPending }) => email === id && registrationPending);
       const title = pending ? "Tinjau pendaftaran Guru BK" : id ? "Profil akun" : "Tambah akun";
@@ -556,6 +593,8 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       document.getElementById(input.id).focus();
     } else if (input.name === "role") {
       accountFields(input.form);
+    } else if (input.name === "kind") {
+      addSchoolOrClassFields(input.form);
     }
   });
 
@@ -566,8 +605,20 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     const remove = event.submitter?.value === "remove";
     const dialog = event.target.closest("dialog");
     const writes = {
-      school: () => api(id ? `central/schools/${id}` : "central/schools", id ? "PATCH" : "POST", { name: form.name }),
-      newClass: () => api(`schools/${id}/classes`, "POST", { name: form.name }),
+      "school-or-class": () => form.kind === "class"
+        ? api(`schools/${form.schoolId}/classes`, "POST", { name: form.className })
+        : api("central/schools", "POST", { name: form.schoolName }),
+      "school-edit": async () => {
+        const selected = data.schools.find((entry) => entry.id === id);
+        const nextName = form.name.trim();
+        const newClassName = form.newClassName.trim();
+        if (!selected || nextName !== selected.name || !newClassName) {
+          await api(`central/schools/${id}`, "PATCH", { name: nextName });
+        }
+        if (newClassName) {
+          await api(`schools/${id}/classes`, "POST", { name: newClassName });
+        }
+      },
       account: () => api(id ? `central/accounts/${id}` : "central/accounts", id ? "PATCH" : "POST", { ...form, enabled: Boolean(form.enabled) }),
       class: () => api(`central/students/${id}/class`, "PATCH", { classId: remove ? null : form.classId }),
       link: () => api("central/guardian-links", "POST", form),
