@@ -97,7 +97,7 @@ export async function initializeApp() {
       return;
     }
     if (user.role === "student" || studentPreview) {
-      if (studentPreview) useStudentPreview();
+      useStudentPreview(studentPreview);
       user.kelas = await loadStudentData();
       if (!button.isConnected) return;
       renderStudentDashboard(user, studentPreview);
@@ -124,14 +124,16 @@ export async function initializeApp() {
     }
     authView.classList.add("hidden");
   } catch (error) {
-    if (!button.isConnected) return;
+    if (!button.isConnected || error?.redirecting) return;
     showLogin();
     showAuthAlert(error.message);
   }
 }
 
 function leave() {
-  logoutUser().catch((error) => alert(error.message));
+  logoutUser().catch((error) => {
+    if (!error?.redirecting) alert(error.message);
+  });
 }
 
 function showAuthAlert(message) {
@@ -144,6 +146,7 @@ async function saveLearning(action, values) {
     refreshStudentPanels();
     return data;
   } catch (error) {
+    if (error?.redirecting) return false;
     refreshStudentPanels();
     alert(error.message);
     return false;

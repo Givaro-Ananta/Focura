@@ -4,8 +4,8 @@ let data;
 let write = Promise.resolve();
 let studentEndpoint = "me";
 
-export function useStudentPreview() {
-  studentEndpoint = "central/student-preview";
+export function useStudentPreview(enabled = true) {
+  studentEndpoint = enabled ? "central/student-preview" : "me";
 }
 
 export function loadStudentModules() {
