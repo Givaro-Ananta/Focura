@@ -6,11 +6,21 @@ import { confirmDialog, escapeHtml as esc, openDriveModal, setFeedback, showDial
 const totalsList = (items) => `<dl class="workspace-stats">${items.map(([label, total]) =>
   `<div><dt>${esc(label)}</dt><dd>${esc(total)}</dd></div>`).join("")}</dl>`;
 
+const scoreFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 });
+
 function monitoring({ totals, surveyRespondents, survey, barrierRespondents, barriers }, databasePath) {
   const surveyChart = surveyRespondents ? `<p class="panel-description">Skala 1 (sangat tidak setuju) sampai 5 (sangat setuju).</p>
+    <div class="survey-legend" aria-hidden="true">
+      <span><i class="survey-legend-swatch survey-score-1"></i>1 Sangat tidak setuju</span>
+      <span><i class="survey-legend-swatch survey-score-2"></i>2</span>
+      <span><i class="survey-legend-swatch survey-score-3"></i>3</span>
+      <span><i class="survey-legend-swatch survey-score-4"></i>4</span>
+      <span><i class="survey-legend-swatch survey-score-5"></i>5 Sangat setuju</span>
+    </div>
     <ul class="analytics-chart">${Object.entries(SURVEY_ITEMS).map(([key, label]) => {
       const counts = survey[key];
-      return `<li><strong>${esc(label)}</strong>
+      const average = counts.reduce((sum, count, index) => sum + count * (index + 1), 0) / surveyRespondents;
+      return `<li><div class="survey-item-head"><strong>${esc(label)}</strong><span class="workspace-meta">Rata-rata ${esc(scoreFormat.format(average))} / 5</span></div>
         <div class="survey-track" aria-hidden="true">${counts.map((count, index) => `<span class="survey-score-${index + 1}" style="width:${100 * count / surveyRespondents}%"></span>`).join("")}</div>
         <span class="workspace-meta">${counts.map((count, index) => `Skor ${index + 1}: ${esc(count)}`).join(" · ")}</span></li>`;
     }).join("")}</ul>` : `<p class="workspace-empty">Belum ada respons angket. Impor hasilnya melalui <a href="${esc(databasePath)}">Database Excel &amp; Form</a>.</p>`;

@@ -1815,6 +1815,59 @@ th {
 .survey-score-3 { background: #7599dc; }
 .survey-score-4 { background: #4270cd; }
 .survey-score-5 { background: #163c9d; }
+.survey-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 16px;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+.survey-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.survey-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.survey-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.directory-count { margin-bottom: 12px; }
+.directory-count:empty { display: none; }
+.workspace-context-banner {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+}
+.workspace-context-banner .workspace-filters { margin-bottom: 0; }
+.workspace-context-banner .workspace-meta { margin-top: 10px; color: var(--primary-dark); }
+.account-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  white-space: nowrap;
+  background: var(--bg-soft);
+  color: var(--text-muted);
+}
+.account-badge.is-pending { background: #fef3c7; color: #92400e; }
+.account-badge.is-enabled { background: var(--success-light); color: #166534; }
+.account-badge.is-disabled { background: var(--danger-light); color: #991b1b; }
+.account-badge.is-unlisted { background: #f1f5f9; color: #475569; }
+.account-badge.is-unprofiled { background: var(--primary-light); color: var(--primary-dark); }
 .survey-columns { display: grid; gap: 8px; margin-bottom: 18px; }
 .survey-columns dt { font-weight: 700; }
 .survey-columns dd { color: var(--text-muted); }

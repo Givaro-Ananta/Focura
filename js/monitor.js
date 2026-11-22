@@ -82,8 +82,9 @@ function overview(stats) {
   </section>`;
 }
 
-function directoryFilters(data, school, grade, showClass) {
+function directoryFilters(data, school, grade, showClass, searchValue = "") {
   return `<div class="workspace-filters">
+    ${showClass ? `<label>Cari siswa<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(searchValue)}" placeholder="Nama, email, atau NIS"></label>` : ""}
     <label for="filter-school">Sekolah<select class="form-control" id="filter-school">${options([["", "Semua sekolah"], ...schoolOptions(data.schools)], school)}</select></label>
     ${showClass ? `<label for="filter-class">Kelas<select class="form-control" id="filter-class">${options([
       ["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
@@ -106,26 +107,43 @@ function accountStatus(account) {
   return account.emailAllowed ? "enabled" : "unlisted";
 }
 
-function accountDirectory(data, role, status) {
-  const rows = data.accounts.filter((account) => (!role || account.role === role) && (!status || accountStatus(account) === status))
-    .sort((a, b) => Number(Boolean(b.registrationPending)) - Number(Boolean(a.registrationPending)))
-    .map((account) => [
-      identity(account.fullName, account.email), escapeHtml(roles[account.role]),
-      accountStatuses[accountStatus(account)],
-      rowAction("edit-account", account.registrationPending ? "Tinjau pendaftaran" : "Kelola", account.email),
-    ]);
-  if (!role && (!status || status === "unprofiled")) {
-    for (const email of data.pendingEmails) {
-      rows.push([identity(email), "—", accountStatuses.unprofiled, rowAction("edit-account", "Buat profil", email)]);
-    }
-  }
-  const empty = role || status ? "Tidak ada akun yang cocok. Ubah pilihan filter untuk melihat akun lain." : "Belum ada akun.";
+function accountBadge(statusKey) {
+  return `<span class="account-badge is-${statusKey}">${escapeHtml(accountStatuses[statusKey])}</span>`;
+}
+
+function accountFilters(data, role, status, searchValue) {
   return `${data.schools.length ? "" : '<p class="workspace-note">Tambahkan sekolah melalui <a href="/admin/sekolah">Sekolah &amp; Kelas</a> untuk membuat atau menyetujui akun Guru BK dan siswa.</p>'}
     <div class="workspace-filters">
+      <label>Cari akun<input type="search" class="form-control" id="filter-account-search" value="${escapeHtml(searchValue)}" placeholder="Nama atau email"></label>
       <label>Peran<select class="form-control" id="filter-account-role">${options([["", "Semua peran"], ...Object.entries(roles)], role)}</select></label>
       <label>Status akun<select class="form-control" id="filter-account-status">${options([["", "Semua status"], ...Object.entries(accountStatuses)], status)}</select></label>
-    </div>
-    ${table(["Akun", "Peran", "Status akun", "Tindakan"], rows, empty)}`;
+    </div>`;
+}
+
+function accountRows(data, role, status, query) {
+  const needle = query.trim().toLocaleLowerCase("id-ID");
+  const matchesQuery = (...fields) => !needle || fields.some((value) => String(value ?? "").toLocaleLowerCase("id-ID").includes(needle));
+  const rows = data.accounts
+    .filter((account) => (!role || account.role === role) && (!status || accountStatus(account) === status) && matchesQuery(account.fullName, account.email))
+    .sort((a, b) => Number(Boolean(b.registrationPending)) - Number(Boolean(a.registrationPending)))
+    .map((account) => {
+      const statusKey = accountStatus(account);
+      return [
+        identity(account.fullName, account.email), escapeHtml(roles[account.role]),
+        accountBadge(statusKey),
+        rowAction("edit-account", account.registrationPending ? "Tinjau pendaftaran" : "Kelola", account.email),
+      ];
+    });
+  if (!role && (!status || status === "unprofiled")) {
+    for (const email of data.pendingEmails) {
+      if (matchesQuery(email)) {
+        rows.push([identity(email), "—", accountBadge("unprofiled"), rowAction("edit-account", "Buat profil", email)]);
+      }
+    }
+  }
+  const total = data.accounts.length + data.pendingEmails.length;
+  const empty = role || status || needle ? "Tidak ada akun yang cocok. Ubah pilihan filter untuk melihat akun lain." : "Belum ada akun.";
+  return { rows, total, empty };
 }
 
 function guardianDirectory(data) {
@@ -194,9 +212,12 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     const context = document.getElementById("monitor-context");
     const selectedSchool = schools.find(({ id }) => id === schoolQuery);
     const schoolPath = (id) => pagePath(workspace, section) + (id ? `?sekolah=${encodeURIComponent(id)}` : "");
-    context.innerHTML = `<div class="workspace-filters"><label class="workspace-school-picker">Sekolah untuk ruang Guru BK
-      <select class="form-control">${options([["", selectedSchool ? "Hapus pilihan sekolah" : "Pilih sekolah"], ...schoolOptions(schools)], selectedSchool?.id || "")}</select>
-      </label></div>`;
+    context.innerHTML = `<div class="workspace-context-banner">
+      <div class="workspace-filters"><label class="workspace-school-picker">Sekolah untuk ruang Guru BK
+        <select class="form-control">${options([["", selectedSchool ? "Hapus pilihan sekolah" : "Pilih sekolah"], ...schoolOptions(schools)], selectedSchool?.id || "")}</select>
+      </label></div>
+      ${selectedSchool ? `<p class="workspace-meta">Menampilkan ruang kerja Guru BK untuk <strong>${escapeHtml(selectedSchool.name)}</strong>.</p>` : ""}
+    </div>`;
     context.querySelector("select").onchange = ({ target }) => window.location.assign(schoolPath(target.value));
     if (section !== "rpl" && !selectedSchool) {
       content.innerHTML = schools.length
@@ -223,14 +244,20 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   let school = filters.get("sekolah") || "";
   let grade = filters.get("kelas") || "";
   let search = "";
+  let teacherSearch = "";
+  let accountSearch = "";
   let accountRole = "";
   let accountState = "";
   let data;
   let busy = false;
   const matchesSchool = (row) => !central || !school || row.schoolId === school;
   const matchesClass = (student) => !grade || (student.classId || "unassigned") === grade;
-  const matchesSearch = (student) => !search || [student.fullName, student.email, student.nis]
-    .some((value) => String(value ?? "").toLocaleLowerCase("id-ID").includes(search.trim().toLocaleLowerCase("id-ID")));
+  const matchesQuery = (query, ...fields) => {
+    const needle = query.trim().toLocaleLowerCase("id-ID");
+    return !needle || fields.some((value) => String(value ?? "").toLocaleLowerCase("id-ID").includes(needle));
+  };
+  const matchesSearch = (student) => matchesQuery(search, student.fullName, student.email, student.nis);
+  const matchesTeacherSearch = (teacher) => matchesQuery(teacherSearch, teacher.fullName, teacher.email);
 
   actions.innerHTML = `<button type="button" class="btn btn-outline" data-action="refresh">Muat ulang</button>
     ${studentsView ? '<button type="button" class="btn btn-outline" data-action="export">Ekspor Excel</button>' : ""}
@@ -238,8 +265,14 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     ${section === "sekolah" ? '<button type="button" class="btn btn-primary" data-action="add-school">Tambah sekolah</button>' : ""}
     ${section === "orang-tua" ? '<button type="button" class="btn btn-primary" data-action="link" disabled>Tautkan wali</button>' : ""}`;
 
+  function setCount(shown, total, noun) {
+    const countEl = document.getElementById("directory-count");
+    if (countEl) countEl.textContent = total ? `Menampilkan ${shown} dari ${total} ${noun}.` : "";
+  }
+
   function renderStudentRows() {
     const students = data.students.filter(matchesSchool).filter(matchesClass).filter(matchesSearch);
+    setCount(students.length, data.students.length, central ? "siswa" : "peserta didik");
     document.getElementById("directory-results").innerHTML = central
       ? table(["Siswa", "Sekolah dan kelas", "Status sesi", "Progres", "Tindakan"],
           students.map((student) => [
@@ -259,25 +292,42 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       ]), "Tidak ada peserta didik yang cocok.");
   }
 
+  function renderTeacherRows() {
+    const teachers = data.teachers.filter(matchesSchool).filter(matchesTeacherSearch);
+    setCount(teachers.length, data.teachers.length, "Guru BK");
+    document.getElementById("directory-results").innerHTML = table(["Guru BK", "Sekolah", "Status sesi"],
+      teachers.map((teacher) => [identity(teacher.fullName, teacher.email), escapeHtml(teacher.school), sessionStatus(teacher)]),
+      "Tidak ada guru BK dalam daftar ini.");
+  }
+
+  function renderAccountRows() {
+    const { rows, total, empty } = accountRows(data, accountRole, accountState, accountSearch);
+    setCount(rows.length, total, "akun");
+    document.getElementById("directory-results").innerHTML = table(["Akun", "Peran", "Status akun", "Tindakan"], rows, empty);
+  }
+
   function render() {
     if (studentsView) {
-      content.innerHTML = `${central ? directoryFilters(data, school, grade, true) : `
+      content.innerHTML = `${central ? directoryFilters(data, school, grade, true, search) : `
         <p class="workspace-note">${escapeHtml(data.schools[0]?.name)} · Ketercapaian RPL minimal 3 dari 4 aktivitas.</p>
         <div class="workspace-filters">
           <label>Cari peserta didik<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(search)}" placeholder="Nama, email, atau NIS"></label>
           <label>Kelas<select class="form-control" id="filter-class">${options([["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
             ...data.classes.map(({ id, name }) => [id, name])], grade)}</select></label>
-        </div>`}<div id="directory-results" class="dashboard-panel"></div>`;
+        </div>`}<p id="directory-count" class="workspace-meta directory-count"></p><div id="directory-results" class="dashboard-panel"></div>`;
       renderStudentRows();
     } else if (section === "guru-bk") {
-      content.innerHTML = directoryFilters(data, school, grade, false) + table(["Guru BK", "Sekolah", "Status sesi"],
-        data.teachers.filter(matchesSchool).map((teacher) => [identity(teacher.fullName), escapeHtml(teacher.school), sessionStatus(teacher)]),
-        "Tidak ada guru BK dalam daftar ini.");
+      content.innerHTML = `<div class="workspace-filters">
+        <label>Cari Guru BK<input type="search" class="form-control" id="filter-teacher-search" value="${escapeHtml(teacherSearch)}" placeholder="Nama atau email"></label>
+        <label for="filter-school">Sekolah<select class="form-control" id="filter-school">${options([["", "Semua sekolah"], ...schoolOptions(data.schools)], school)}</select></label>
+      </div><p id="directory-count" class="workspace-meta directory-count"></p><div id="directory-results" class="dashboard-panel"></div>`;
+      renderTeacherRows();
     } else if (section === "sekolah") {
       content.innerHTML = schoolDirectory(data);
     } else if (section === "akun") {
       actions.querySelector('[data-action="add-account"]').disabled = !data.schools.length;
-      content.innerHTML = accountDirectory(data, accountRole, accountState);
+      content.innerHTML = `${accountFilters(data, accountRole, accountState, accountSearch)}<p id="directory-count" class="workspace-meta directory-count"></p><div id="directory-results" class="dashboard-panel"></div>`;
+      renderAccountRows();
     } else if (section === "orang-tua") {
       const canLink = ["guardian", "student"].every((role) => data.accounts.some((account) => account.role === role));
       actions.querySelector('[data-action="link"]').disabled = !canLink;
@@ -288,6 +338,8 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   }
 
   async function refresh(message = "") {
+    const refreshBtn = actions.querySelector('[data-action="refresh"]');
+    if (refreshBtn) refreshBtn.disabled = true;
     content.setAttribute("aria-busy", "true");
     try {
       data = await requestDirectory(endpoint);
@@ -296,14 +348,20 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     } catch (error) {
       setFeedback(feedback, error.message, "error");
     } finally {
+      if (refreshBtn) refreshBtn.disabled = false;
       content.removeAttribute("aria-busy");
     }
   }
 
-  async function save(action, dialog) {
+  async function save(action, dialog, submitter) {
     if (busy) return;
     busy = true;
     const status = dialog?.querySelector(".workspace-feedback") || feedback;
+    const originalText = submitter?.textContent;
+    if (submitter) {
+      submitter.disabled = true;
+      submitter.textContent = "Menyimpan…";
+    }
     setFeedback(status, "");
     try {
       await action();
@@ -313,6 +371,10 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       setFeedback(status, error.message, "error");
     } finally {
       busy = false;
+      if (submitter && submitter.isConnected) {
+        submitter.disabled = false;
+        submitter.textContent = originalText;
+      }
     }
   }
 
@@ -326,11 +388,14 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     }
     if (!data) return;
     if (action === "export") {
+      actionButton.disabled = true;
       try {
         const current = await requestDirectory(central && school ? `${endpoint}?school=${encodeURIComponent(school)}` : endpoint);
         exportAdminRecapWorkbook(current.students.filter(matchesClass).filter(matchesSearch));
       } catch (error) {
         setFeedback(feedback, error.message, "error");
+      } finally {
+        actionButton.disabled = false;
       }
     } else if (action === "add-school" || action === "edit-school") {
       const selected = data.schools.find((entry) => entry.id === id);
@@ -376,9 +441,17 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   });
 
   content.addEventListener("input", (event) => {
-    if (event.target.id !== "filter-student-search") return;
-    search = event.target.value;
-    renderStudentRows();
+    const { id, value } = event.target;
+    if (id === "filter-student-search") {
+      search = value;
+      renderStudentRows();
+    } else if (id === "filter-teacher-search") {
+      teacherSearch = value;
+      renderTeacherRows();
+    } else if (id === "filter-account-search") {
+      accountSearch = value;
+      renderAccountRows();
+    }
   });
 
   content.addEventListener("change", (event) => {
@@ -421,7 +494,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       class: () => api(`central/students/${id}/class`, "PATCH", { classId: remove ? null : form.classId }),
       link: () => api("central/guardian-links", "POST", form),
     };
-    await save(writes[operation], dialog);
+    await save(writes[operation], dialog, event.submitter);
   });
 
   content.innerHTML = '<p class="workspace-empty" role="status">Memuat data…</p>';
