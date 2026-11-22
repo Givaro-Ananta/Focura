@@ -1,7 +1,7 @@
 import { APP_CONFIG } from "./config.js";
 import { exportAdminRecapWorkbook, exportSurveyTemplate, importReportText, importSurveyWorkbook } from "./excel-sync.js";
 import { SURVEY_ITEMS } from "./learning-rules.js";
-import { confirmDialog, escapeHtml as esc, openDriveModal, setFeedback, showDialog } from "./ui.js";
+import { confirmDialog, escapeHtml as esc, openDriveModal, setFeedback, showDialog, showToast } from "./ui.js";
 
 const totalsList = (items) => `<dl class="workspace-stats">${items.map(([label, total]) =>
   `<div><dt>${esc(label)}</dt><dd>${esc(total)}</dd></div>`).join("")}</dl>`;
@@ -67,7 +67,7 @@ export async function setupBkPage(section, { content, feedback, actions, bkApi, 
       content.innerHTML = `<p class="workspace-note">${esc(school)}</p>${section === "pemantauan" ? monitoring(summary, workspacePath("database")) : home}`;
       setFeedback(feedback, "");
     } catch (error) {
-      setFeedback(feedback, error.message, "error");
+      showToast(error.message, "error");
     } finally {
       reload.disabled = false;
       content.removeAttribute("aria-busy");
@@ -110,11 +110,12 @@ async function setupMaterials(content, feedback, actions, bkApi) {
       try {
         await bkApi(module ? `bk/modules/${encodeURIComponent(module.id)}` : "bk/modules", module ? "PATCH" : "POST", fields);
         dialog.close();
-        setFeedback(feedback, "Modul disimpan.", "success");
+        showToast("Modul disimpan.", "success");
         await refresh();
         add.focus();
       } catch (error) {
-        setFeedback(dialog.open ? status : feedback, error.message, "error");
+        if (dialog.open) setFeedback(status, error.message, "error");
+        else showToast(error.message, "error");
       } finally {
         busy = event.submitter.disabled = false;
       }
@@ -137,17 +138,17 @@ async function setupMaterials(content, feedback, actions, bkApi) {
       busy = button.disabled = true;
       try {
         await bkApi(`bk/modules/${encodeURIComponent(module.id)}`, "DELETE");
-        setFeedback(feedback, "Modul dihapus dari daftar sekolah.", "success");
+        showToast("Modul dihapus dari daftar sekolah.", "success");
         await refresh();
         add.focus();
       } catch (error) {
-        setFeedback(feedback, error.message, "error");
+        showToast(error.message, "error");
       } finally {
         busy = button.disabled = false;
       }
     }
   };
-  try { await refresh(); } catch (error) { setFeedback(feedback, error.message, "error"); }
+  try { await refresh(); } catch (error) { showToast(error.message, "error"); }
 }
 
 function setupDatabase(content, feedback, actions, bkApi) {
@@ -158,9 +159,9 @@ function setupDatabase(content, feedback, actions, bkApi) {
     try {
       const [directory, summary] = await Promise.all([bkApi("bk/students"), bkApi("bk/summary")]);
       exportAdminRecapWorkbook(directory.students, summary);
-      setFeedback(feedback, "Workbook rekap siap diunduh.", "success");
+      showToast("Workbook rekap berhasil diunduh.", "success");
     } catch (error) {
-      setFeedback(feedback, error.message, "error");
+      showToast(error.message, "error");
     } finally {
       button.disabled = false;
     }
@@ -181,7 +182,7 @@ function setupDatabase(content, feedback, actions, bkApi) {
     </section>`;
 
   content.querySelector("#survey-template").onclick = () => {
-    try { exportSurveyTemplate(); } catch (error) { setFeedback(feedback, error.message, "error"); }
+    try { exportSurveyTemplate(); } catch (error) { showToast(error.message, "error"); }
   };
   const input = content.querySelector("#survey-file");
   const save = content.querySelector("#survey-save");

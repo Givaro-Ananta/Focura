@@ -177,22 +177,21 @@ export function setupFocusTimer(refreshStudentPanels) {
   async function change(action, values, message = "") {
     if (busy) return;
     busy = true;
-    setFeedback(status, "Menyimpan timer…", "info");
+    setFeedback(status, "Menyimpan timer…");
     render();
     try {
       await updateStudentData(action, values);
       requestId = null;
       completionAttempted = false;
       if (action === "startFocus" && postActions) postActions.hidden = true;
-      if (action === "recordFocus") {
-        if (postActions) postActions.hidden = false;
-        showToast("Sesi fokus tercatat di Jejak Progres!", "success");
-      }
+      if (action === "recordFocus" && postActions) postActions.hidden = false;
       refreshStudentPanels();
-      setFeedback(status, message, message ? "success" : "");
+      setFeedback(status, "");
+      if (message) showToast(message, "success");
       sync();
     } catch (error) {
-      setFeedback(status, error.message, "error");
+      setFeedback(status, "");
+      showToast(error.message, "error");
       if (error.status === 409 || error.status === 404) {
         try {
           await loadStudentData();

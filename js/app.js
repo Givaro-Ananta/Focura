@@ -210,12 +210,11 @@ function renderStudentDashboard(user, preview) {
   document.getElementById("student-consultation-link").href = APP_CONFIG.consultationFormUrl;
   document.getElementById("btn-student-logout").onclick = leave;
   document.getElementById("btn-export-student-xlsx").onclick = () => {
-    const report = document.getElementById("student-import-report");
     try {
       exportStudentWorkbook(user, getStudentData());
-      showToast("File Excel progres belajar disiapkan.", "success");
+      showToast("File Excel progres belajar berhasil diunduh.", "success");
     } catch (error) {
-      setFeedback(report, error.message, "error");
+      showToast(error.message, "error");
     }
   };
   setupStudentImport();
@@ -511,7 +510,7 @@ function setupBarriersChecklist() {
   };
   report(data.selectedBarriers);
   container.onchange = () => {
-    setFeedback(status, "Pilihan berubah. Klik tombol di atas untuk menyimpan dan melihat strategi.", "info");
+    setFeedback(status, "Pilihan berubah. Klik tombol di atas untuk menyimpan.");
   };
   button.onclick = async () => {
     const checked = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((el) => el.value);
@@ -520,25 +519,24 @@ function setupBarriersChecklist() {
     button.disabled = false;
     if (!saved) return;
     report(saved.selectedBarriers);
-    setFeedback(status, checked.length ? "Pemetaan disimpan. Strategi belajarmu tersedia di bawah." : "Pilihan dikosongkan.", "success");
+    setFeedback(status, "");
+    showToast(checked.length ? "Pemetaan disimpan. Strategi belajarmu tersedia di bawah." : "Pilihan dikosongkan.", "success");
   };
 }
 
 function setupReflectionForm() {
-  const status = document.getElementById("reflection-status");
   document.getElementById("form-reflection").onsubmit = async (e) => {
     e.preventDefault();
     const learned = document.getElementById("ref-learned").value.trim();
     const feeling = document.getElementById("ref-feeling").value.trim();
     const improvement = document.getElementById("ref-improvement").value.trim();
     if (!learned || !feeling || !improvement) {
-      setFeedback(status, "Lengkapi ketiga kolom refleksi sebelum menyimpan.", "error");
+      showToast("Lengkapi ketiga kolom refleksi sebelum menyimpan.", "error");
       return;
     }
     e.submitter.disabled = true;
     if (await saveLearning("saveReflection", { learned, feeling, improvement })) {
       e.target.reset();
-      setFeedback(status, "Refleksi belajar tersimpan di ruang pribadimu.", "success");
       showToast("Refleksi belajar tersimpan di ruang pribadimu!", "success");
     }
     e.submitter.disabled = false;

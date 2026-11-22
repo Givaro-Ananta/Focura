@@ -29,6 +29,16 @@ export function setFeedback(element, message, tone = "") {
   else delete element.dataset.tone;
 }
 
+function toastIcon(tone) {
+  if (tone === "success") {
+    return '<svg viewBox="0 0 20 20" aria-hidden="true"><circle class="focura-toast-ring" cx="10" cy="10" r="8"/><path class="focura-toast-check" d="M6.2 10.3 8.8 12.9 14 7.5"/></svg>';
+  }
+  if (tone === "error") {
+    return '<svg viewBox="0 0 20 20" aria-hidden="true"><circle class="focura-toast-ring" cx="10" cy="10" r="8"/><path class="focura-toast-mark" d="M10 6.5v4.5M10 13.5h.01"/></svg>';
+  }
+  return '<svg viewBox="0 0 20 20" aria-hidden="true"><circle class="focura-toast-ring" cx="10" cy="10" r="8"/><path class="focura-toast-mark" d="M10 9.5v4.5M10 6.5h.01"/></svg>';
+}
+
 export function showToast(message, tone = "info") {
   if (!message) return;
   let stack = document.getElementById("focura-toast-stack");
@@ -38,12 +48,21 @@ export function showToast(message, tone = "info") {
     stack.className = "focura-toast-stack";
     document.body.append(stack);
   }
+  for (const existing of [...stack.children]) {
+    if (existing.dataset.message === message && existing.dataset.tone === tone) existing.remove();
+  }
   while (stack.children.length >= 3) stack.firstElementChild?.remove();
 
   const toast = document.createElement("div");
   toast.className = "focura-toast";
   toast.dataset.tone = tone;
+  toast.dataset.message = message;
   toast.setAttribute("role", tone === "error" ? "alert" : "status");
+
+  const icon = document.createElement("span");
+  icon.className = "focura-toast-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.innerHTML = toastIcon(tone);
 
   const text = document.createElement("span");
   text.textContent = message;
@@ -52,17 +71,25 @@ export function showToast(message, tone = "info") {
   closeButton.type = "button";
   closeButton.className = "focura-toast-close";
   closeButton.setAttribute("aria-label", "Tutup notifikasi");
-  closeButton.textContent = "×";
+  closeButton.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5"/></svg>';
 
-  toast.append(text, closeButton);
+  toast.append(icon, text, closeButton);
   stack.append(toast);
 
   let timer;
+  let dismissed = false;
   let remaining = 4500;
   let startedAt = Date.now();
   const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
     clearTimeout(timer);
-    toast.remove();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      toast.remove();
+      return;
+    }
+    toast.classList.add("is-leaving");
+    setTimeout(() => toast.remove(), 180);
   };
   const schedule = () => {
     clearTimeout(timer);

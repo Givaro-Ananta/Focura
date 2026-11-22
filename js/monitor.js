@@ -3,7 +3,7 @@ import { setupBkPage } from "./bk.js";
 import { exportAdminRecapWorkbook } from "./excel-sync.js";
 import { APP_CONFIG } from "./config.js";
 import { JAKARTA } from "./learning-rules.js";
-import { confirmDialog, escapeHtml, setFeedback, setupMobileMenu, showDialog } from "./ui.js";
+import { confirmDialog, escapeHtml, setFeedback, setupMobileMenu, showDialog, showToast } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 const roles = { admin: "Admin Central", bk: "Guru BK", student: "Siswa", guardian: "Orang Tua/Wali" };
@@ -23,7 +23,7 @@ const pageDetails = {
   akun: ["lock", "Tetapkan peran dan izin login untuk akun yang terdaftar."],
   "orang-tua": ["users", "Kelola siswa yang dapat dilihat oleh setiap orang tua atau wali."],
   rpl: ["document", "Panduan pelaksanaan layanan bimbingan klasikal menggunakan Focura."],
-  "beranda-bk": ["home", "Ringkasan aktivitas pendampingan di sekolah penugasan."],
+  "beranda-bk": ["home", "Ringkasan aktivitas pendampingan."],
   pemantauan: ["chart", "Pantau aktivitas belajar, angket kebutuhan awal, dan pemetaan hambatan siswa."],
   materi: ["book", "Kelola materi Google Drive yang tersedia di sekolah penugasan."],
   database: ["document", "Ekspor rekap dan impor hasil angket kebutuhan awal."],
@@ -76,9 +76,9 @@ function overview(stats) {
   <section class="workspace-section dashboard-fill">
     <div class="workspace-section-heading"><h2>Aktivitas per sekolah</h2><p>Jumlah akun yang sedang login dari total akun terdaftar.</p></div>
     ${table(["Sekolah", "Guru BK login / terdaftar", "Siswa login / terdaftar", "Daftar siswa"], stats.map((school) => [
-      identity(school.name), `${school.activeTeachers} / ${school.teachers}`, `${school.activeStudents} / ${school.students}`,
-      `<a class="workspace-row-action" href="/admin/siswa?sekolah=${encodeURIComponent(school.id)}">Lihat siswa</a>`,
-    ]), "Belum ada sekolah. Tambahkan sekolah melalui menu Sekolah & Kelas.")}
+    identity(school.name), `${school.activeTeachers} / ${school.teachers}`, `${school.activeStudents} / ${school.students}`,
+    `<a class="workspace-row-action" href="/admin/siswa?sekolah=${encodeURIComponent(school.id)}">Lihat siswa</a>`,
+  ]), "Belum ada sekolah. Tambahkan sekolah melalui menu Sekolah & Kelas.")}
   </section>`;
 }
 
@@ -87,9 +87,9 @@ function directoryFilters(data, school, grade, showClass, searchValue = "") {
     ${showClass ? `<label>Cari siswa<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(searchValue)}" placeholder="Nama, email, atau NIS"></label>` : ""}
     <label for="filter-school">Sekolah<select class="form-control" id="filter-school">${options([["", "Semua sekolah"], ...schoolOptions(data.schools)], school)}</select></label>
     ${showClass ? `<label for="filter-class">Kelas<select class="form-control" id="filter-class">${options([
-      ["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
-      ...data.classes.filter((entry) => !school || entry.schoolId === school).map(({ id, name }) => [id, name]),
-    ], grade)}</select></label>` : ""}
+    ["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
+    ...data.classes.filter((entry) => !school || entry.schoolId === school).map(({ id, name }) => [id, name]),
+  ], grade)}</select></label>` : ""}
   </div>`;
 }
 
@@ -97,7 +97,7 @@ function schoolDirectory(data) {
   return table(["Sekolah", "Kelas", "Tindakan"], data.schools.map((school) => {
     const classes = data.classes.filter(({ schoolId }) => schoolId === school.id);
     return [identity(school.name), escapeHtml(classes.map(({ name }) => name).join(", ") || "Belum ada kelas"),
-      `<div class="workspace-actions">${rowAction("edit-school", "Ubah nama", school.id)}${rowAction("add-class", "Tambah kelas", school.id)}</div>`];
+    `<div class="workspace-actions">${rowAction("edit-school", "Ubah nama", school.id)}${rowAction("add-class", "Tambah kelas", school.id)}</div>`];
   }), "Belum ada sekolah.");
 }
 
@@ -275,13 +275,13 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     setCount(students.length, data.students.length, central ? "siswa" : "peserta didik");
     document.getElementById("directory-results").innerHTML = central
       ? table(["Siswa", "Sekolah dan kelas", "Status sesi", "Progres", "Tindakan"],
-          students.map((student) => [
-            identity(student.fullName, student.nis ? `NIS ${student.nis}` : ""),
-            identity(student.kelas, student.school),
-            sessionStatus(student),
-            `${student.focusCount} sesi · ${student.reflectionCount} refleksi<span class="workspace-meta">${student.rplCount}/4 indikator RPL</span>`,
-            rowAction("edit-class", "Ubah kelas", student.id),
-          ]), "Tidak ada siswa dalam daftar ini.")
+        students.map((student) => [
+          identity(student.fullName, student.nis ? `NIS ${student.nis}` : ""),
+          identity(student.kelas, student.school),
+          sessionStatus(student),
+          `${student.focusCount} sesi · ${student.reflectionCount} refleksi<span class="workspace-meta">${student.rplCount}/4 indikator RPL</span>`,
+          rowAction("edit-class", "Ubah kelas", student.id),
+        ]), "Tidak ada siswa dalam daftar ini.")
       : table(["Peserta didik", "Kelas", "Aktivitas RPL", "Sesi fokus", "Privasi refleksi", "Status sesi"], students.map((student) => [
         identity(student.fullName, student.email),
         identity(student.kelas, student.nis ? `NIS ${student.nis}` : ""),
@@ -313,7 +313,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
         <div class="workspace-filters">
           <label>Cari peserta didik<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(search)}" placeholder="Nama, email, atau NIS"></label>
           <label>Kelas<select class="form-control" id="filter-class">${options([["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
-            ...data.classes.map(({ id, name }) => [id, name])], grade)}</select></label>
+      ...data.classes.map(({ id, name }) => [id, name])], grade)}</select></label>
         </div>`}<p id="directory-count" class="workspace-meta directory-count"></p><div id="directory-results" class="dashboard-panel"></div>`;
       renderStudentRows();
     } else if (section === "guru-bk") {
@@ -344,9 +344,10 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     try {
       data = await requestDirectory(endpoint);
       render();
-      setFeedback(feedback, message, message ? "success" : "");
+      setFeedback(feedback, "");
+      if (message) showToast(message, "success");
     } catch (error) {
-      setFeedback(feedback, error.message, "error");
+      showToast(error.message, "error");
     } finally {
       if (refreshBtn) refreshBtn.disabled = false;
       content.removeAttribute("aria-busy");
@@ -356,19 +357,20 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   async function save(action, dialog, submitter) {
     if (busy) return;
     busy = true;
-    const status = dialog?.querySelector(".workspace-feedback") || feedback;
+    const dialogStatus = dialog?.querySelector(".workspace-feedback");
     const originalText = submitter?.textContent;
     if (submitter) {
       submitter.disabled = true;
       submitter.textContent = "Menyimpan…";
     }
-    setFeedback(status, "");
+    setFeedback(dialogStatus || feedback, "");
     try {
       await action();
       dialog?.close();
       await refresh("Perubahan disimpan.");
     } catch (error) {
-      setFeedback(status, error.message, "error");
+      if (dialog?.open && dialogStatus) setFeedback(dialogStatus, error.message, "error");
+      else showToast(error.message, "error");
     } finally {
       busy = false;
       if (submitter && submitter.isConnected) {
@@ -392,8 +394,9 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       try {
         const current = await requestDirectory(central && school ? `${endpoint}?school=${encodeURIComponent(school)}` : endpoint);
         exportAdminRecapWorkbook(current.students.filter(matchesClass).filter(matchesSearch));
+        showToast("Workbook rekap berhasil diunduh.", "success");
       } catch (error) {
-        setFeedback(feedback, error.message, "error");
+        showToast(error.message, "error");
       } finally {
         actionButton.disabled = false;
       }
