@@ -200,10 +200,12 @@ function renderStudentDashboard(user, preview) {
       heading.focus();
     }
   }, { signal });
-  window.addEventListener("hashchange", () => {
+  const syncFromHistory = () => {
     if (!studentView.isConnected) return;
     switchStudentSection(sectionFromHash(), { syncHash: false });
-  }, { signal });
+  };
+  window.addEventListener("hashchange", syncFromHistory, { signal });
+  window.addEventListener("popstate", syncFromHistory, { signal });
 
   document.getElementById("student-consultation-link").href = APP_CONFIG.consultationFormUrl;
   document.getElementById("btn-student-logout").onclick = leave;
