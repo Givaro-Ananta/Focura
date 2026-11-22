@@ -192,7 +192,10 @@
             <label for="focus-topic-input">Topik belajar</label>
             <input type="text" id="focus-topic-input" class="form-control" maxlength="300" placeholder="Contoh: Membaca bab sistem tata surya" />
           </div>
-          <div id="timer-display" class="timer-circle" role="timer" aria-label="Waktu tersisa">10:00</div>
+          <div id="timer-display" class="timer-circle" role="timer" aria-label="Waktu tersisa">
+            <span id="timer-value">10:00</span>
+            <span id="timer-sublabel" class="timer-sublabel">Siap mulai</span>
+          </div>
           <p id="focus-active-topic" class="workspace-feedback"></p>
           <div class="focus-options">
             <button type="button" id="btn-start-timer" class="btn btn-primary">Mulai sesi fokus</button>
@@ -200,7 +203,11 @@
             <button type="button" id="btn-finish-timer" class="btn btn-primary" hidden>Selesaikan sesi</button>
             <button type="button" id="btn-reset-timer" class="btn btn-outline">Reset</button>
           </div>
+          <label class="focus-sound-option"><input type="checkbox" id="focus-sound-toggle" checked /> Bunyi pengingat saat sesi selesai</label>
           <p id="focus-status" class="workspace-feedback" role="status"></p>
+          <div id="focus-post-actions" class="focus-options" hidden>
+            <button type="button" class="btn btn-primary" data-open-section="refleksi">Lanjut tulis Refleksi Belajar</button>
+          </div>
         </div>
       </section>
 

@@ -157,6 +157,8 @@ async function saveLearning(action, values) {
 /* ==========================================================================
    DASHBOARD SISWA (TERISOLASI PER AKUN)
    ========================================================================== */
+let focusTimerControl;
+
 function renderStudentDashboard(user, preview) {
   document.getElementById("student-greeting").textContent = preview ? "Pratinjau Ruang Siswa" : `Halo, ${user.fullName}!`;
   document.getElementById("student-meta").textContent = preview
@@ -201,7 +203,8 @@ function renderStudentDashboard(user, preview) {
   setupBarriersChecklist();
   setupReflectionForm();
   switchStudentSection("beranda");
-  setupFocusTimer(refreshStudentPanels);
+  focusTimerControl?.destroy();
+  focusTimerControl = setupFocusTimer(refreshStudentPanels);
 }
 
 function setupStudentImport() {
@@ -332,6 +335,7 @@ function renderTasks(tasks) {
   select.replaceChildren(new Option("Belajar mandiri", ""), ...tasks.filter(({ completed }) => !completed)
     .map(({ id, title }) => new Option(title, id)));
   if ([...select.options].some((option) => option.value === value)) select.value = value;
+  focusTimerControl?.syncTasks();
 }
 
 function setupTaskManager() {

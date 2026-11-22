@@ -806,9 +806,12 @@ select.form-control {
   #focus-island::after { content: none; }
   #focus-island .ui-icon { width: 20px; height: 20px; }
   #focus-island-time { padding-inline-start: 10px; font-size: 1.125rem; }
-  #student-app-view:has(#focus-island:not([hidden])) .main-area {
+  #student-app-view:has(#focus-island:not([hidden])):has(#sec-fokus.hidden) .main-area {
     padding-top: calc(env(safe-area-inset-top, 0px) + 66px);
   }
+}
+#student-app-view:has(#sec-fokus:not(.hidden)) #focus-island {
+  display: none;
 }
 @media (prefers-reduced-motion: no-preference) {
   #focus-island:not([hidden]) { animation: focus-island-enter 180ms ease-out; }
@@ -822,20 +825,67 @@ select.form-control {
 .focus-topic { max-width: 340px; margin: 20px auto 0; text-align: left; }
 
 .timer-circle {
+  position: relative;
   width: min(100%, 216px);
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 10px solid var(--primary-light);
-  border-top-color: var(--primary);
+  background: conic-gradient(var(--primary) var(--timer-progress, 100%), var(--primary-light) 0);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   margin: 20px auto;
   font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1;
   font-weight: 800;
   color: var(--primary-dark);
   font-variant-numeric: tabular-nums;
+}
+
+.timer-circle::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: var(--bg-card);
+}
+
+.timer-circle > span {
+  position: relative;
+  z-index: 1;
+}
+
+.timer-circle.is-ready {
+  background: var(--success);
+  color: #15803d;
+}
+
+.timer-sublabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.focus-sound-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.focus-sound-option input {
+  width: 16px;
+  height: 16px;
+}
+
+#focus-post-actions {
+  margin-top: 12px;
 }
 
 /* Tabel & RPL */
@@ -1414,10 +1464,10 @@ th {
   #student-app-view .sidebar,
   .workspace-sidebar { align-items: center; padding-block: 10px; }
   .workspace-sidebar { grid-template-rows: auto; }
-  #student-app-view:has(#focus-island:not([hidden])) .sidebar {
+  #student-app-view:has(#focus-island:not([hidden])):has(#sec-fokus.hidden) .sidebar {
     padding-top: calc(env(safe-area-inset-top, 0px) + 44px);
   }
-  #student-app-view:has(#focus-island:not([hidden])) .main-area { padding-top: 28px; }
+  #student-app-view:has(#focus-island:not([hidden])):has(#sec-fokus.hidden) .main-area { padding-top: 28px; }
   #student-menu-toggle, #monitor-menu-toggle {
     display: grid;
     place-items: center;
