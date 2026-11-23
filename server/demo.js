@@ -30,6 +30,7 @@ export function createDemoStore() {
   return {
     async emails() { return new Set(allowed); },
     async addEmail(email) { allowed.add(email); },
+    async removeEmail(email) { allowed.delete(email); },
     async read(...names) {
       return Object.fromEntries(names.map((name) => [name, structuredClone(tables[name])]));
     },

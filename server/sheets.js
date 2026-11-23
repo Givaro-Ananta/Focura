@@ -26,16 +26,28 @@ async function tabs(id) {
   return Object.fromEntries(result.sheets.map(({ properties }) => [properties.title, properties.sheetId]));
 }
 
+async function allowlistValues(id) {
+  const { values = [] } = await request(id, "/values/Email%21A2%3AA");
+  return values;
+}
+
 export const sheets = {
   async emails() {
     const { allowlist } = connection();
-    const { values = [] } = await request(allowlist, "/values/Email%21A2%3AA");
+    const values = await allowlistValues(allowlist);
     return new Set(values.map(([value]) => emailAddress(value)).filter((email) => /^[^\s@]+@[^\s@]+$/.test(email)));
   },
 
   async addEmail(email) {
     const { allowlist } = connection();
     await request(allowlist, "/values/Email%21A%3AA:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS", { values: [[email]] });
+  },
+
+  async removeEmail(email) {
+    const { allowlist } = connection();
+    const values = await allowlistValues(allowlist);
+    const ranges = values.flatMap(([value], i) => emailAddress(value) === email ? [`Email!A${i + 2}`] : []);
+    if (ranges.length) await request(allowlist, "/values:batchClear", { ranges });
   },
 
   async read(...tables) {

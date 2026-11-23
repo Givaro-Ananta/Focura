@@ -29,6 +29,7 @@ function fixture() {
       assert(!emails.has(email), "Email tidak boleh ditambahkan dua kali");
       emails.add(email);
     },
+    async removeEmail(email) { emails.delete(email); },
     async read(...names) {
       return Object.fromEntries(names.map((name) => [name, structuredClone(tables[name])]));
     },
@@ -152,6 +153,38 @@ test("A previously rejected Guru BK record is replaced by a verified new registr
   assert(!registrations[0].registrationRejected);
   assert(!emails.has(applicant.email));
   await assert.rejects(service.startSession(applicant), { status: 409 });
+});
+
+test("Admin Central can delete profiles and allowlist entries while protecting administrator access", async () => {
+  const { service, admin, guardian, student, emails, tables, actor } = fixture();
+  const access = await actor(admin);
+  const guardianAccess = await actor(guardian);
+  assert.throws(() => service.deleteAccount(guardianAccess, student.id), { status: 403 });
+  await assert.rejects(service.deleteAccount(access, admin.id), { status: 403 });
+  emails.add("master@example.test");
+  const masterProfile = { email: "master@example.test", email_verified: true, sub: "google-master" };
+  const master = await service.context(await service.startSession(masterProfile));
+  await assert.rejects(service.deleteAccount(access, master.actor.id), { status: 403 });
+  await assert.rejects(service.deleteAccount(access, undefined, student.email), { status: 409 });
+
+  const unprofiled = "belum-ada@example.test";
+  emails.add(unprofiled);
+  await service.deleteAccount(access, undefined, unprofiled);
+  assert(!emails.has(unprofiled));
+  const session = await service.startSession(profile(student));
+  await service.setGuardianLink(access, { guardianId: guardian.id, studentId: student.id });
+  tables.Belajar.push({ id: "riwayat", owner: student.id });
+  await service.deleteAccount(access, student.id);
+  await service.deleteAccount(access, student.id);
+  assert(!emails.has(student.email));
+  assert(!tables.Akun.some((account) => account.id === student.id));
+  assert(tables.Sesi.find(({ id }) => id === session).revokedAt);
+  assert.equal(tables.TautanWali[0].enabled, false);
+  assert(tables.Belajar.some(({ owner }) => owner === student.id));
+  await assert.rejects(service.context(session), { status: 401 });
+  await assert.rejects(service.startSession(profile(student)), { status: 403 });
+  assert.deepEqual((await service.centralView(await actor(admin), "akun")).protectedEmails,
+    [masterProfile.email, admin.email]);
 });
 
 test("Admin Central can create Guru BK and student accounts and their emails remain revocable", async () => {

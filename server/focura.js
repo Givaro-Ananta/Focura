@@ -286,6 +286,10 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       .map((session) => ["Sesi", { ...session, revokedAt: time }]);
   }
 
+  function protectedAccountEmails(access) {
+    return [master, access.actor.email].filter(Boolean);
+  }
+
   async function dashboard(access, schoolId, page) {
     allow(access, "admin", "bk");
     const { actor, accounts, sessions, emails } = access;
@@ -447,7 +451,8 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       const accounts = access.accounts.map((account) => ({ ...publicAccount(account), emailAllowed: access.emails.has(account.email) }));
       const existing = new Set(accounts.map(({ email }) => email));
       const pendingEmails = [...access.emails].filter((email) => !existing.has(email));
-      return { schools, accounts, pendingEmails };
+      const protectedEmails = protectedAccountEmails(access).filter((email) => existing.has(email) || access.emails.has(email));
+      return { schools, accounts, pendingEmails, protectedEmails };
     },
 
     registerTeacher(profile) {
@@ -483,6 +488,25 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         requireValue(account.enabled === false && (account.registrationPending || account.registrationRejected),
           "Pendaftaran ini sudah diputuskan.", 409);
         await store.write([["Akun", account, "delete"]]);
+      });
+    },
+
+    deleteAccount(access, id, address) {
+      allow(access, "admin");
+      return serialize(async () => {
+        const emailWithoutProfile = emailAddress(address);
+        const { Akun, Sesi, TautanWali } = await store.read("Akun", ...(id ? ["Sesi", "TautanWali"] : []));
+        const account = Akun.find((entry) => id ? entry.id === id : entry.email === emailWithoutProfile);
+        if (id && !account) return;
+        requireValue(id || !account, "Email sudah memiliki profil akun. Muat ulang daftar akun.", 409);
+        const email = account?.email ?? emailWithoutProfile;
+        requireValue(validEmail(email), "Email tidak valid.");
+        requireValue(!protectedAccountEmails(access).includes(email), "Akun sendiri dan akun Master Admin dilindungi.", 403);
+        await store.removeEmail(email);
+        if (!account) return;
+        const links = TautanWali.filter((link) => link.enabled && (link.guardianId === id || link.studentId === id))
+          .map((link) => ["TautanWali", { ...link, enabled: false }]);
+        await store.write([["Akun", account, "delete"], ...revoke(Sesi, id), ...links]);
       });
     },
 

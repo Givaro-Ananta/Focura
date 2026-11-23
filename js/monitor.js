@@ -139,6 +139,10 @@ function accountFilters(data, role, status, searchValue) {
 function accountRows(data, role, status, query) {
   const needle = query.trim().toLocaleLowerCase("id-ID");
   const matchesQuery = (...fields) => !needle || fields.some((value) => String(value ?? "").toLocaleLowerCase("id-ID").includes(needle));
+  const deleteAction = (email, id) => data.protectedEmails?.includes(email) ? ""
+    : iconAction("delete-account", "trash", `Hapus akun ${email}`, {
+      id, destructive: true, attrs: ` data-email="${escapeHtml(email)}"`,
+    });
   const rows = data.accounts
     .filter((account) => (!role || account.role === role) && (!status || accountStatus(account) === status) && matchesQuery(account.fullName, account.email))
     .sort((a, b) => Number(Boolean(b.registrationPending)) - Number(Boolean(a.registrationPending)))
@@ -147,8 +151,9 @@ function accountRows(data, role, status, query) {
       return [
         identity(account.fullName, account.email), escapeHtml(roles[account.role]),
         accountBadge(statusKey),
-        iconAction("edit-account", account.registrationPending ? "user-check" : "pencil",
-          account.registrationPending ? `Tinjau pendaftaran ${account.fullName}` : `Edit akun ${account.fullName}`, { id: account.email }),
+        `<div class="workspace-actions">${iconAction("edit-account", account.registrationPending ? "user-check" : "pencil",
+          account.registrationPending ? `Tinjau pendaftaran ${account.fullName}` : `Edit akun ${account.fullName}`, { id: account.email })}
+          ${deleteAction(account.email, account.id)}</div>`,
       ];
     });
   if (!role && (!status || status === "unprofiled")) {
@@ -156,7 +161,8 @@ function accountRows(data, role, status, query) {
       if (matchesQuery(email)) {
         rows.push([
           identity(email), "—", accountBadge("unprofiled"),
-          iconAction("edit-account", "user-plus", `Buat profil ${email}`, { id: email }),
+          `<div class="workspace-actions">${iconAction("edit-account", "user-plus", `Buat profil ${email}`, { id: email })}
+            ${deleteAction(email)}</div>`,
         ]);
       }
     }
@@ -396,7 +402,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   function renderAccountRows() {
     const { rows, total, empty } = accountRows(data, accountRole, accountState, accountSearch);
     setCount(rows.length, total, "akun");
-    document.getElementById("directory-results").innerHTML = table(["Akun", "Peran", "Status akun", "Edit"], rows, empty, "shield-check");
+    document.getElementById("directory-results").innerHTML = table(["Akun", "Peran", "Status akun", "Aksi"], rows, empty, "shield-check");
   }
 
   function render() {
@@ -538,6 +544,19 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       const title = reviewing ? "Tinjau pendaftaran Guru BK" : id ? "Profil akun" : "Tambah akun";
       showDialog(content, title, accountForm(data, id));
       accountFields(content.querySelector('form[data-operation="account"]'));
+    } else if (action === "delete-account") {
+      if (busy) return;
+      const { email } = actionButton.dataset;
+      if (await confirmDialog(content, {
+        title: "Hapus akun",
+        message: id ? `Hapus profil dan cabut akses masuk untuk ${email}? Riwayat belajar tetap tersimpan.`
+          : `Hapus ${email} dari daftar izin masuk?`,
+        confirmLabel: "Hapus akun",
+        destructive: true,
+      })) {
+        const endpoint = id ? `central/accounts/${encodeURIComponent(id)}` : `central/accounts?email=${encodeURIComponent(email)}`;
+        await save(() => api(endpoint, "DELETE"));
+      }
     } else if (action === "reject-registration") {
       if (busy) return;
       const form = actionButton.form;

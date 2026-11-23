@@ -367,23 +367,6 @@ function refreshStudentPanels() {
     btn.classList.toggle("is-done", Boolean(doneBySection[btn.dataset.journeyRpl]));
   });
 
-  const rplChecklist = document.getElementById("rpl-checklist");
-  if (rplChecklist) {
-    const steps = [
-      { section: "hambatan", label: "Kenali Hambatan", done: doneBySection.hambatan },
-      { section: "tugas", label: "Atur Tugas", done: doneBySection.tugas },
-      { section: "fokus", label: "Latihan Fokus", done: doneBySection.fokus },
-      { section: "refleksi", label: "Refleksi Belajar", done: doneBySection.refleksi },
-    ];
-    rplChecklist.innerHTML = steps.map(({ section, label, done }) => `
-      <li>
-        <button type="button" class="rpl-step${done ? " is-done" : ""}" data-open-section="${section}" aria-label="${escapeHtml(label)} (${done ? "Sudah tercapai" : "Belum tercapai"})">
-          <span class="rpl-step-mark" aria-hidden="true">${done ? "✓" : ""}</span>
-          <span>${escapeHtml(label)}</span>
-        </button>
-      </li>`).join("");
-  }
-
   const featureMeta = {
     materi: "Panduan belajar",
     hambatan: data.selectedBarriers.length ? `${data.selectedBarriers.length} hambatan dipilih` : "Belum diisi",
