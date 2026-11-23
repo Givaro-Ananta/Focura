@@ -68,9 +68,6 @@ body {
       background: #fff;
       color: #163b9a;
     }
-    & .rpl-step { background: var(--bg-card); border-color: var(--border); color: var(--text-main); }
-    & .rpl-step.is-done { background: #fff; border-color: #fff; color: #163b9a; }
-    & .rpl-step.is-done .rpl-step-mark { background: #16a34a; border-color: #16a34a; color: #fff; }
     & .feature-meta { color: var(--text-muted); }
     & .chart-bar.is-task-only { background: var(--primary-light); }
     & :is(.btn-primary, #btn-pause-timer, #btn-reset-timer):hover:not(:disabled),
@@ -877,12 +874,9 @@ select.form-control {
   #focus-island::after { content: none; }
   #focus-island .ui-icon { width: 20px; height: 20px; }
   #focus-island-time { padding-inline-start: 10px; font-size: 1.125rem; }
-  #student-app-view:has(#focus-island:not([hidden])):has(#sec-fokus.hidden) .main-area {
+  #student-app-view:has(#focus-island:not([hidden])) .main-area {
     padding-top: calc(env(safe-area-inset-top, 0px) + 66px);
   }
-}
-#student-app-view:has(#sec-fokus:not(.hidden)) #focus-island {
-  display: none;
 }
 @media (prefers-reduced-motion: no-preference) {
   #focus-island:not([hidden]) { animation: focus-island-enter 180ms ease-out; }
@@ -1669,10 +1663,9 @@ th {
   #student-app-view .sidebar,
   .workspace-sidebar { align-items: center; padding-block: 10px; }
   .workspace-sidebar { grid-template-rows: auto; }
-  #student-app-view:has(#focus-island:not([hidden])):has(#sec-fokus.hidden) .sidebar {
+  #student-app-view:has(#focus-island:not([hidden])) .sidebar {
     padding-top: calc(env(safe-area-inset-top, 0px) + 44px);
   }
-  #student-app-view:has(#focus-island:not([hidden])):has(#sec-fokus.hidden) .main-area { padding-top: 28px; }
   #student-menu-toggle, #monitor-menu-toggle {
     display: grid;
     place-items: center;
@@ -1790,60 +1783,6 @@ th {
   font-size: 0.875rem;
 }
 
-.rpl-checklist {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  list-style: none;
-  margin-bottom: 20px;
-}
-
-.rpl-step {
-  width: 100%;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  color: var(--text-main);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 650;
-  text-align: left;
-  cursor: pointer;
-}
-
-.rpl-step:hover {
-  border-color: var(--primary);
-}
-
-.rpl-step.is-done {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
-}
-
-.rpl-step-mark {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border: 1.5px solid var(--control-border);
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.rpl-step.is-done .rpl-step-mark {
-  border-color: #16a34a;
-  background: #16a34a;
-  color: #ffffff;
-}
-
 .student-feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1878,12 +1817,10 @@ th {
 
 @container (max-width: 56rem) {
   .student-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .rpl-checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @container (max-width: 36rem) {
   .student-feature-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; gap: 12px; }
-  .rpl-checklist { grid-template-columns: minmax(0, 1fr); }
 }
 
 .student-results, .bk-activity { margin-top: 20px; }
@@ -1904,6 +1841,47 @@ th {
 .drive-module h2, .drive-module h3 { font-size: 1.125rem; }
 .drive-module p { margin-top: 6px; color: var(--text-muted); }
 .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+
+#sec-materi > .panel-title { font-size: clamp(1.5rem, 2.2vw, 2rem); }
+#sec-materi > .panel-description { font-size: clamp(1rem, 1.25vw, 1.125rem); }
+#modules-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+
+#modules-grid > .drive-module {
+  container-type: inline-size;
+  gap: clamp(16px, 2vw, 32px);
+}
+
+#modules-grid .module-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+#modules-grid .module-copy h3 {
+  font-size: clamp(1.5rem, calc(1rem + 4cqi), 2.25rem);
+  line-height: 1.2;
+}
+
+#modules-grid .module-copy p {
+  margin: 0;
+  font-size: clamp(1rem, calc(0.875rem + 1.5cqi), 1.25rem);
+  line-height: 1.55;
+}
+
+#modules-grid .workspace-meta {
+  margin: 0;
+  font-size: clamp(0.875rem, calc(0.75rem + 0.75cqi), 1rem);
+  font-weight: 650;
+}
+
+#modules-grid .workspace-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+}
+
+#modules-grid .workspace-actions .btn { font-size: 1rem; text-align: center; }
 
 @media screen and (min-height: 42rem) {
   @container dashboard (min-width: 56rem) {
@@ -2072,7 +2050,6 @@ th {
   .task-row,
   .dropdown-trigger,
   .dropdown-chevron svg,
-  .rpl-step,
   .icon-action-btn,
   .icon-action-btn .ui-icon,
   .focura-toast {

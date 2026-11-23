@@ -1,7 +1,7 @@
 /**
  * Modul Pengendali Utama UI Focura — Ruang Fokus
  * Menghubungkan Autentikasi Landscape, Dashboard Siswa, Timer Latihan Fokus,
- * Materi Google Drive, Konsultasi Google Form, RPL Klasikal, dan Ruang Admin Guru BK.
+ * Materi belajar, Konsultasi Google Form, RPL Klasikal, dan Ruang Admin Guru BK.
  */
 
 import { APP_CONFIG } from "./config.js";
@@ -10,9 +10,9 @@ import { getStudentData, loadStudentData, loadStudentModules, updateStudentData,
 import { exportStudentWorkbook, importReportText, importStudentWorkbook } from "./excel-sync.js";
 import { setupFocusTimer } from "./focus-timer.js";
 import { syncDropdown } from "./dropdowns.js";
-import { driveLinks, JAKARTA } from "./learning-rules.js";
+import { JAKARTA } from "./learning-rules.js";
 import { setupMonitor } from "./monitor.js";
-import { confirmDialog, escapeHtml, openDriveModal, setFeedback, setupMobileMenu, showToast } from "./ui.js";
+import { confirmDialog, escapeHtml, openModuleModal, setFeedback, setupMobileMenu, showToast } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 export async function initializeApp() {
@@ -202,7 +202,10 @@ function renderStudentDashboard(user, preview) {
   }, { signal });
   const syncFromHistory = () => {
     if (!studentView.isConnected) return;
-    switchStudentSection(sectionFromHash(), { syncHash: false });
+    const section = sectionFromHash();
+    if (document.getElementById(`sec-${section}`).classList.contains("hidden")) {
+      switchStudentSection(section, { syncHash: false });
+    }
   };
   window.addEventListener("hashchange", syncFromHistory, { signal });
   window.addEventListener("popstate", syncFromHistory, { signal });
@@ -285,7 +288,7 @@ function switchStudentSection(sectionId, { syncHash = true, push = true } = {}) 
       else window.history.replaceState(null, "", nextUrl);
     }
   }
-  if (target === "materi") renderDriveModules();
+  if (target === "materi") renderModules();
 }
 
 function refreshStudentPanels() {
@@ -304,23 +307,6 @@ function refreshStudentPanels() {
   const criteriaDone = data.rplCount;
   document.getElementById("rpl-progress-badge").textContent = `Aktivitas RPL: ${criteriaDone} dari 4`;
   document.getElementById("rpl-progress-meter").value = criteriaDone;
-
-  const rplChecklist = document.getElementById("rpl-checklist");
-  if (rplChecklist) {
-    const steps = [
-      { section: "hambatan", label: "Kenali Hambatan", done: data.selectedBarriers.length > 0 },
-      { section: "tugas", label: "Atur Tugas", done: data.tasks.length > 0 },
-      { section: "fokus", label: "Latihan Fokus", done: data.focusSessions.length > 0 },
-      { section: "refleksi", label: "Refleksi Belajar", done: data.reflections.length > 0 },
-    ];
-    rplChecklist.innerHTML = steps.map(({ section, label, done }) => `
-      <li>
-        <button type="button" class="rpl-step${done ? " is-done" : ""}" data-open-section="${section}" aria-label="${escapeHtml(label)} (${done ? "Sudah tercapai" : "Belum tercapai"})">
-          <span class="rpl-step-mark" aria-hidden="true">${done ? "✓" : ""}</span>
-          <span>${escapeHtml(label)}</span>
-        </button>
-      </li>`).join("");
-  }
 
   const featureMeta = {
     materi: "Panduan belajar sekolah",
@@ -543,25 +529,24 @@ function setupReflectionForm() {
   };
 }
 
-async function renderDriveModules() {
-  const grid = document.getElementById("drive-modules-grid");
+async function renderModules() {
+  const grid = document.getElementById("modules-grid");
   grid.textContent = "Memuat materi…";
   grid.setAttribute("aria-busy", "true");
   try {
     const modules = await loadStudentModules();
-    grid.innerHTML = modules.map((mod) => {
-      const links = driveLinks(mod.editUrl);
-      if (!links) return "";
-      return `<article class="card drive-module"><div>
+    grid.innerHTML = modules.map((mod) => `<article class="card drive-module">
         ${mod.category ? `<p class="workspace-meta">${escapeHtml(mod.category)}</p>` : ""}
-        <h3>${escapeHtml(mod.title)}</h3><p>${escapeHtml(mod.description)}</p>
-      </div><div class="workspace-actions">
-        <button type="button" class="btn btn-primary" data-preview="${escapeHtml(mod.id)}">Pratinjau Modul</button>
-        <a class="btn btn-outline" href="${escapeHtml(links.editUrl)}" target="_blank" rel="noopener noreferrer">Buka Google Drive</a>
-      </div></article>`;
-    }).join("") || '<p class="workspace-empty">Belum ada materi yang tersedia untuk sekolahmu.</p>';
+        <div class="module-copy"><h3>${escapeHtml(mod.title)}</h3><p>${escapeHtml(mod.description)}</p></div>
+        <div class="workspace-actions">
+          <button type="button" class="btn btn-primary" data-preview="${escapeHtml(mod.id)}">Pratinjau Modul</button>
+          ${mod.previewUrl.startsWith("/")
+            ? `<a class="btn btn-outline" href="${escapeHtml(mod.previewUrl)}" download>Unduh PDF</a>`
+            : `<a class="btn btn-outline" href="${escapeHtml(mod.editUrl)}" target="_blank" rel="noopener noreferrer">Buka Google Drive</a>`}
+        </div>
+      </article>`).join("") || '<p class="workspace-empty">Belum ada materi yang tersedia untuk sekolahmu.</p>';
     grid.querySelectorAll("[data-preview]").forEach((button) => {
-      button.onclick = () => openDriveModal(modules.find(({ id }) => id === button.dataset.preview));
+      button.onclick = () => openModuleModal(modules.find(({ id }) => id === button.dataset.preview));
     });
   } catch (error) {
     grid.textContent = error.message;

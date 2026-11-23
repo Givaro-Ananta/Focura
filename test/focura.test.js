@@ -208,6 +208,25 @@ test("Admin pages return only the data needed by each section", async () => {
   await assert.rejects(service.centralView(teacherAccess, "akun"), { status: 403 });
 });
 
+test("Editing a school validates the new class before saving either change", async () => {
+  const { service, admin, actor } = fixture();
+  const access = await actor(admin);
+  const before = await service.centralView(access, "sekolah");
+
+  await assert.rejects(service.saveSchool(access, { name: "Nama baru", newClassName: " x " }, "a"), { status: 409 });
+  assert.deepEqual(await service.centralView(access, "sekolah"), before);
+
+  await service.saveSchool(access, { name: "Nama baru", newClassName: " XI " }, "a");
+  const updated = await service.centralView(access, "sekolah");
+  assert.equal(updated.schools.find(({ id }) => id === "a").name, "Nama baru");
+  assert.deepEqual(updated.classes.filter(({ schoolId }) => schoolId === "a").map(({ name }) => name), ["X", "XI"]);
+
+  await service.saveSchool(access, { name: "Nama akhir" }, "a");
+  const renamed = await service.centralView(access, "sekolah");
+  assert.equal(renamed.schools.find(({ id }) => id === "a").name, "Nama akhir");
+  assert.deepEqual(renamed.classes, updated.classes);
+});
+
 test("Class removal preserves learning and login, while access deactivation revokes all sessions", async () => {
   const { service, admin, student, stranger, actor } = fixture();
   const adminAccess = await actor(admin);
@@ -238,7 +257,7 @@ test("School modules preserve defaults and constrain create, edit and removal to
   const [bk, otherBk, ownStudent, otherStudent, parent] = await Promise.all(
     [teacher, otherTeacher, student, stranger, guardian].map(actor));
   const defaults = await service.modules(ownStudent);
-  assert.equal(defaults.length, 3);
+  assert.deepEqual(defaults.map(({ previewUrl }) => previewUrl), ["/MODUL%201.pdf", "/MODUL%202.pdf", "/MODUL%203.pdf"]);
   const input = { title: "<Panduan>", description: "Regulasi diri", schoolId: "b",
     editUrl: "https://drive.google.com/file/d/FOCUS/view?resourcekey=required&unneeded=ignored" };
   await service.saveModule(bk, input);
@@ -253,9 +272,13 @@ test("School modules preserve defaults and constrain create, edit and removal to
   await assert.rejects(service.modules(parent), { status: 403 });
   assert.throws(() => service.saveModule(ownStudent, input), { status: 403 });
   await service.saveModule(bk, { ...input, title: "Ubah lokal" }, defaults[0].id);
-  await service.saveModule(otherBk, { ...input, title: "Ubah sekolah kedua" }, defaults[0].id);
-  assert.equal((await service.modules(ownStudent))[0].title, "Ubah lokal");
-  assert.equal((await service.modules(otherStudent))[0].title, "Ubah sekolah kedua");
+  await service.saveModule(otherBk, { ...input, title: "Ubah sekolah kedua", editUrl: defaults[0].editUrl }, defaults[0].id);
+  const [localOverride] = await service.modules(ownStudent);
+  const [metadataOverride] = await service.modules(otherStudent);
+  assert.equal(localOverride.title, "Ubah lokal");
+  assert.equal(localOverride.previewUrl, added.previewUrl);
+  assert.equal(metadataOverride.title, "Ubah sekolah kedua");
+  assert.equal(metadataOverride.previewUrl, defaults[0].previewUrl);
   await service.saveModule(bk, null, added.id, true);
   await service.saveModule(bk, null, defaults[0].id, true);
   assert.equal((await service.modules(ownStudent)).length, 2);

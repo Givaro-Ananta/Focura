@@ -1,5 +1,3 @@
-import { driveLinks } from "./learning-rules.js";
-
 export function setupMobileMenu(toggle) {
   const menu = document.getElementById(toggle.getAttribute("aria-controls"));
   toggle.onclick = () => {
@@ -109,28 +107,28 @@ export function showToast(message, tone = "info") {
   schedule();
 }
 
-export function openDriveModal(module) {
-  const links = driveLinks(module?.editUrl);
-  if (!links) return;
-  const modal = document.getElementById("drive-preview-modal");
-  const iframe = document.getElementById("modal-drive-iframe");
-  const loading = document.getElementById("modal-drive-loading");
-  const external = document.getElementById("modal-drive-external");
+export function openModuleModal(module) {
+  if (!module?.previewUrl) return;
+  const modal = document.getElementById("module-preview-modal");
+  const iframe = document.getElementById("module-preview-frame");
+  const loading = document.getElementById("module-preview-loading");
+  const external = document.getElementById("module-preview-external");
   const listeners = new AbortController();
-  document.getElementById("modal-drive-title").textContent = module.title;
-  if (external) external.href = links.editUrl;
-  if (loading) loading.hidden = false;
+  document.getElementById("module-preview-title").textContent = module.title;
+  external.hidden = module.previewUrl.startsWith("/");
+  external.href = module.editUrl;
+  loading.hidden = false;
   iframe.addEventListener("load", () => {
-    if (loading) loading.hidden = true;
+    loading.hidden = true;
   }, { once: true, signal: listeners.signal });
-  iframe.src = links.previewUrl;
+  iframe.src = module.previewUrl;
   modal.addEventListener("click", (event) => {
     if (event.target === modal) modal.close();
   }, { signal: listeners.signal });
   modal.addEventListener("close", () => {
     listeners.abort();
     iframe.removeAttribute("src");
-    if (loading) loading.hidden = true;
+    loading.hidden = true;
   }, { once: true });
   modal.showModal();
 }

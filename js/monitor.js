@@ -608,17 +608,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       "school-or-class": () => form.kind === "class"
         ? api(`schools/${form.schoolId}/classes`, "POST", { name: form.className })
         : api("central/schools", "POST", { name: form.schoolName }),
-      "school-edit": async () => {
-        const selected = data.schools.find((entry) => entry.id === id);
-        const nextName = form.name.trim();
-        const newClassName = form.newClassName.trim();
-        if (!selected || nextName !== selected.name || !newClassName) {
-          await api(`central/schools/${id}`, "PATCH", { name: nextName });
-        }
-        if (newClassName) {
-          await api(`schools/${id}/classes`, "POST", { name: newClassName });
-        }
-      },
+      "school-edit": () => api(`central/schools/${id}`, "PATCH", { name: form.name, newClassName: form.newClassName }),
       account: () => api(id ? `central/accounts/${id}` : "central/accounts", id ? "PATCH" : "POST", { ...form, enabled: Boolean(form.enabled) }),
       class: () => api(`central/students/${id}/class`, "PATCH", { classId: remove ? null : form.classId }),
       link: () => api("central/guardian-links", "POST", form),

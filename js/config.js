@@ -1,6 +1,6 @@
 /**
  * Modul Konfigurasi & Data Statis Focura (Ruang Fokus)
- * Berisi tautan Google Form Konsultasi, Modul Google Drive,
+ * Berisi tautan Google Form Konsultasi, modul belajar,
  * dan Dokumen Rencana Pelaksanaan Layanan (RPL) Bimbingan Klasikal.
  */
 
@@ -8,30 +8,30 @@ export const APP_CONFIG = {
   appName: "Focura — Ruang Fokus",
   subtitle: "Media Bimbingan & Konseling Konsentrasi Belajar Siswa SMA",
   consultationFormUrl: "https://forms.gle/SNFh7o8WdDHCGU8XA",
-  driveModules: [
+  defaultModules: [
     {
       id: "modul-1",
-      title: "Modul 1: Konsep Konsentrasi & Pemusatan Perhatian",
+      title: "Modul 1: Mengenal Konsentrasi Belajar",
       category: "Tips Konsentrasi",
-      description: "Memahami perhatian berkelanjutan (sustained attention) serta pemetaan faktor internal & eksternal pengganggu belajar.",
+      description: "Kenali cara kerja konsentrasi, faktor yang memengaruhi fokus, dan cara mengatasi gangguan saat belajar.",
       editUrl: "https://docs.google.com/document/d/1-X4NfZKUDpVSCfd5QjZTYBCM1rXAtEgU/edit?usp=drive_link&ouid=117363627042746594064&rtpof=true&sd=true",
-      previewUrl: "https://docs.google.com/document/d/1-X4NfZKUDpVSCfd5QjZTYBCM1rXAtEgU/preview"
+      previewUrl: "/MODUL%201.pdf"
     },
     {
       id: "modul-2",
-      title: "Modul 2: Strategi Mengelola Distraksi Digital & Waktu Belajar",
-      category: "Manajemen Waktu",
-      description: "Panduan praktis mengurangi gangguan ponsel/media sosial, mengatur jeda belajar, dan membagi tugas menjadi bagian kecil.",
+      title: "Modul 2: Regulasi Diri dan Strategi Meningkatkan Fokus Belajar",
+      category: "Regulasi Diri",
+      description: "Latih fokus dengan menetapkan target, memantau proses belajar, dan mengevaluasi hasilnya.",
       editUrl: "https://docs.google.com/document/d/167git0j5Vu-1Mdwa4x6vhqhCXHJWLO1y/edit?usp=drive_link&ouid=117363627042746594064&rtpof=true&sd=true",
-      previewUrl: "https://docs.google.com/document/d/167git0j5Vu-1Mdwa4x6vhqhCXHJWLO1y/preview"
+      previewUrl: "/MODUL%202.pdf"
     },
     {
       id: "modul-3",
-      title: "Modul 3: Regulasi Diri (Self-Regulated Learning) & Refleksi",
-      category: "Cara Belajar",
-      description: "Penerapan siklus perencanaan, pemantauan fokus, dan evaluasi kebiasaan belajar mandiri bagi peserta didik SMA.",
+      title: "Modul 3: Manajemen Waktu dan Kebiasaan Belajar Efektif",
+      category: "Manajemen Waktu",
+      description: "Susun prioritas tugas dan jadwal belajar sederhana untuk membangun kebiasaan belajar yang teratur.",
       editUrl: "https://docs.google.com/document/d/1mz9y2fov2HN7F5tb_FxQ-YNVo3wQ2GU1/edit?usp=drive_link&ouid=117363627042746594064&rtpof=true&sd=true",
-      previewUrl: "https://docs.google.com/document/d/1mz9y2fov2HN7F5tb_FxQ-YNVo3wQ2GU1/preview"
+      previewUrl: "/MODUL%203.pdf"
     }
   ],
   barriersList: [
@@ -40,7 +40,7 @@ export const APP_CONFIG = {
     { id: "bosan", label: "Mudah bosan atau lelah", explanation: "Perhatian dapat menurun ketika belajar terlalu lama tanpa jeda.", tip: "Coba satu sesi fokus 10–25 menit lalu ambil jeda peregangan 3–5 menit." },
     { id: "lingkungan", label: "Lingkungan belajar tidak kondusif", explanation: "Suara, lalu lintas orang, atau meja yang penuh bisa mengalihkan perhatian.", tip: "Siapkan tempat yang lebih tenang dan sisakan hanya perlengkapan untuk satu tugas." },
     { id: "melayang", label: "Pikiran mudah melayang atau kehilangan fokus", explanation: "Pikiran lain terkadang muncul saat mengerjakan tugas.", tip: "Catat pikiran itu singkat, lalu kembali ke satu langkah yang bisa kamu selesaikan sekarang." },
-    { id: "materi", label: "Kesulitan memahami materi pelajaran yang kompleks", explanation: "Bagian yang belum dipahami bisa menghentikan alur belajar.", tip: "Baca ringkasan modul di Google Drive terlebih dahulu lalu catat poin pertanyaan untuk didiskusikan." },
+    { id: "materi", label: "Kesulitan memahami materi pelajaran yang kompleks", explanation: "Bagian yang belum dipahami bisa menghentikan alur belajar.", tip: "Baca ringkasan modul di menu Materi lalu catat poin pertanyaan untuk didiskusikan." },
     { id: "tunda", label: "Sering menunda-nunda tugas sekolah (prokrastinasi)", explanation: "Memulai tugas bisa terasa berat saat langkah pertamanya belum jelas.", tip: "Mulai dari tugas berdurasi 10 menit menggunakan timer Mulai Fokus agar hambatan awal berkurang." }
   ],
   rplDocument: {
@@ -62,7 +62,7 @@ export const APP_CONFIG = {
     tindakLanjut: "Peserta didik mencoba strategi fokus pada kegiatan belajar berikutnya. Guru BK memberi penguatan dan menyediakan konsultasi sukarela melalui formulir yang tersedia.",
     langkahPelaksanaan: [
       { tahap: "1. Pendahuluan (10 Menit)", rincian: "Guru BK menyapa peserta didik, membangun suasana kondusif, menyampaikan tujuan layanan, menjelaskan prinsip privasi data & persetujuan sadar (informed consent), serta mengarahkan siswa masuk dengan akun Google yang terdaftar di Focura." },
-      { tahap: "2. Kegiatan Inti — Eksplorasi & Identifikasi (15 Menit)", rincian: "Peserta didik membaca ringkasan pada halaman Beranda & menu Materi (terhubung Google Drive), lalu mengisi fitur Kenali Hambatan secara non-diagnostik." },
+      { tahap: "2. Kegiatan Inti — Eksplorasi & Identifikasi (15 Menit)", rincian: "Peserta didik membaca ringkasan di Beranda dan membuka modul di menu Materi, lalu mengisi fitur Kenali Hambatan secara non-diagnostik." },
       { tahap: "3. Kegiatan Inti — Latihan Fokus & Target (20 Menit)", rincian: "Guru BK memandu penyusunan prioritas pada fitur Atur Tugas, dilanjutkan simulasi sesi belajar terfokus menggunakan timer Mulai Fokus." },
       { tahap: "4. Kegiatan Inti — Diskusi Kelompok (10 Menit)", rincian: "Diskusi kelompok kecil mengenai studi kasus gangguan konsentrasi belajar siswa SMA dan perumusan strategi regulasi diri." },
       { tahap: "5. Kegiatan Inti — Refleksi & Jejak Progres (20 Menit)", rincian: "Peserta didik menuliskan evaluasi pada fitur Refleksi Belajar, memantau grafik Jejak Progres, dan mengunduh catatan belajar." },

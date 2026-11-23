@@ -166,7 +166,7 @@ export function setupFocusTimer(refreshStudentPanels) {
     render();
     if (!busy && timer?.deadline && Date.now() >= localDeadline + 5000 && !completionAttempted) {
       completionAttempted = true;
-      void change("recordFocus", current(), "Sesi selesai dan tercatat di Jejak Progres.");
+      void change("recordFocus", current());
     }
   }
 
@@ -174,7 +174,7 @@ export function setupFocusTimer(refreshStudentPanels) {
     return { id: timer.id, version: timer.version };
   }
 
-  async function change(action, values, message = "") {
+  async function change(action, values) {
     if (busy) return;
     busy = true;
     setFeedback(status, "Menyimpan timer…");
@@ -187,7 +187,6 @@ export function setupFocusTimer(refreshStudentPanels) {
       if (action === "recordFocus" && postActions) postActions.hidden = false;
       refreshStudentPanels();
       setFeedback(status, "");
-      if (message) showToast(message, "success");
       sync();
     } catch (error) {
       setFeedback(status, "");
@@ -216,19 +215,19 @@ export function setupFocusTimer(refreshStudentPanels) {
   }
   custom.oninput = task.onchange = render;
   start.onclick = () => {
-    if (timer) return change("resumeFocus", current(), "Timer dilanjutkan.");
+    if (timer) return change("resumeFocus", current());
     if (selected === "custom" && !custom.reportValidity()) return;
     requestId ??= crypto.randomUUID();
-    return change("startFocus", { requestId, durationMinutes: duration(), taskId: task.value, topic: topic.value }, "Timer berjalan.");
+    return change("startFocus", { requestId, durationMinutes: duration(), taskId: task.value, topic: topic.value });
   };
-  pause.onclick = () => change("pauseFocus", current(), "Timer dijeda.");
+  pause.onclick = () => change("pauseFocus", current());
   finish.onclick = () => {
     if (!timer?.deadline || remaining() > 0) return;
     completionAttempted = true;
-    return change("recordFocus", current(), "Sesi selesai dan tercatat di Jejak Progres.");
+    return change("recordFocus", current());
   };
   reset.onclick = () => {
-    if (timer) return change("resetFocus", current(), "Timer direset.");
+    if (timer) return change("resetFocus", current());
     if (postActions) postActions.hidden = true;
     setFeedback(status, "");
     render();

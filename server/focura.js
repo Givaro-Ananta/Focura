@@ -34,6 +34,11 @@ function text(value, limit, required = true) {
   return value.trim();
 }
 
+function newClassRecord(classes, schoolId, name) {
+  requireValue(!classes.some((entry) => entry.schoolId === schoolId && entry.name.toLowerCase() === name.toLowerCase()), "Nama kelas sudah digunakan.", 409);
+  return { id: randomUUID(), name, schoolId };
+}
+
 function validEmail(email) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+$/.test(email);
 }
@@ -127,11 +132,16 @@ function studySummary(records) {
 
 function schoolModules(records, schoolId) {
   const scoped = records.filter((record) => record.schoolId === schoolId);
-  const modules = new Map(APP_CONFIG.driveModules.map((record) => [record.id, record]));
+  const defaults = new Map(APP_CONFIG.defaultModules.map((record) => [record.id, record]));
+  const modules = new Map(defaults);
   for (const record of scoped) modules.set(record.moduleId, record);
-  return [...modules.values()].flatMap(({ id, moduleId, title, category, description, editUrl, deleted }) => {
+  return [...modules].flatMap(([id, { title, category, description, editUrl, deleted }]) => {
     const links = driveLinks(editUrl);
-    return !deleted && links ? [{ id: moduleId || id, title, category, description, ...links }] : [];
+    if (deleted || !links) return [];
+    const builtIn = defaults.get(id);
+    // Keep the bundled PDF when a school edits only the module metadata.
+    const previewUrl = links.editUrl === driveLinks(builtIn?.editUrl)?.editUrl ? builtIn.previewUrl : links.previewUrl;
+    return [{ id, title, category, description, editUrl: links.editUrl, previewUrl }];
   });
 }
 
@@ -475,13 +485,17 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       return Kelas.filter((entry) => entry.schoolId === schoolId).map(({ id, name }) => ({ id, name }));
     },
 
-    saveSchool(access, { name }, id) {
+    saveSchool(access, { name, newClassName = "" }, id) {
       allow(access, "admin");
       return serialize(async () => {
-        const { Sekolah } = await store.read("Sekolah");
+        const className = id ? text(newClassName, 80, false) : "";
+        const { Sekolah, Kelas } = await store.read("Sekolah", ...(className ? ["Kelas"] : []));
         const existing = Sekolah.find((entry) => entry.id === id);
         requireValue(!id || existing, "Sekolah tidak ditemukan.", 404);
-        await store.write([["Sekolah", { ...existing, id: id || randomUUID(), name: text(name, 120) }]]);
+        const school = { ...existing, id: id || randomUUID(), name: text(name, 120) };
+        const changes = [["Sekolah", school]];
+        if (className) changes.push(["Kelas", newClassRecord(Kelas, school.id, className)]);
+        await store.write(changes);
       });
     },
 
@@ -490,9 +504,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       return serialize(async () => {
         const { Sekolah, Kelas } = await store.read("Sekolah", "Kelas");
         requireValue(Sekolah.some((entry) => entry.id === schoolId), "Sekolah tidak ditemukan.", 404);
-        const cleanName = text(name, 80);
-        requireValue(!Kelas.some((entry) => entry.schoolId === schoolId && entry.name.toLowerCase() === cleanName.toLowerCase()), "Nama kelas sudah digunakan.", 409);
-        await store.write([["Kelas", { id: randomUUID(), name: cleanName, schoolId }]]);
+        await store.write([["Kelas", newClassRecord(Kelas, schoolId, text(name, 80))]]);
       });
     },
 

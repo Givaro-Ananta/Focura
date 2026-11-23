@@ -1,7 +1,7 @@
 import { APP_CONFIG } from "./config.js";
 import { exportAdminRecapWorkbook, exportSurveyTemplate, importReportText, importSurveyWorkbook } from "./excel-sync.js";
 import { SURVEY_ITEMS } from "./learning-rules.js";
-import { confirmDialog, escapeHtml as esc, openDriveModal, setFeedback, showDialog, showToast } from "./ui.js";
+import { confirmDialog, escapeHtml as esc, openModuleModal, setFeedback, showDialog, showToast } from "./ui.js";
 
 const totalsList = (items) => `<dl class="workspace-stats">${items.map(([label, total]) =>
   `<div><dt>${esc(label)}</dt><dd>${esc(total)}</dd></div>`).join("")}</dl>`;
@@ -134,7 +134,7 @@ async function setupMaterials(content, feedback, actions, bkApi) {
     if (!button || busy) return;
     const module = modules.find(({ id }) => id === button.closest("[data-module]").dataset.module);
     if (!module) return;
-    if (button.dataset.moduleAction === "preview") openDriveModal(module);
+    if (button.dataset.moduleAction === "preview") openModuleModal(module);
     else if (button.dataset.moduleAction === "edit") edit(module);
     else if (await confirmDialog(content, {
       title: "Hapus modul",
