@@ -828,7 +828,7 @@ select.form-control {
   display: contents;
 }
 
-#student-preview-exit {
+.preview-exit {
   margin-bottom: 8px;
 }
 
@@ -1762,13 +1762,21 @@ th {
 }
 
 .workspace-account {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.workspace-account:has(.preview-exit:not([hidden])) {
+  padding-top: 12px;
+}
+
+.workspace-account-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 4px 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.875rem;
+  padding-inline: 4px;
 }
 
 .workspace-account p {

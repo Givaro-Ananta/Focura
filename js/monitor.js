@@ -189,7 +189,7 @@ function accountForm(data, address) {
   const rejected = selected?.registrationRejected;
   const reviewing = pending || rejected;
   const roleChoices = reviewing ? [["bk", roles.bk]] : address ? Object.entries(roles)
-    : [["", "Pilih peran"], ["bk", roles.bk], ["student", roles.student]];
+    : [["", "Pilih peran"], ["bk", roles.bk], ["student", roles.student], ["guardian", roles.guardian]];
   return `<form data-operation="account" data-id="${escapeHtml(selected?.id)}" class="workspace-form">
     ${rejected ? "<p>Pendaftaran ini ditolak. Untuk menyetujuinya, pilih sekolah penugasan Guru BK.</p>"
     : pending ? "<p>Pilih sekolah untuk memberi Guru BK akses ke ruang kerja sekolah tersebut.</p>" : ""}
@@ -278,6 +278,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   const nav = document.getElementById("monitor-nav");
   setupMobileMenu(document.getElementById("monitor-menu-toggle"));
   const centralInBk = user.role === "admin" && workspace === "bk";
+  document.getElementById("bk-preview-exit").hidden = !centralInBk;
   const schoolQuery = new URLSearchParams(window.location.search).get("sekolah") || "";
   const bkSchoolQuery = centralInBk && schoolQuery ? `?sekolah=${encodeURIComponent(schoolQuery)}` : "";
   const workspacePath = (slug) => pagePath(workspace, slug) + bkSchoolQuery;
@@ -299,7 +300,6 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
   } else {
     nav.innerHTML = Object.entries(pages).map(([slug, label]) =>
       `<a href="${escapeHtml(workspacePath(slug))}"${slug === section ? ' aria-current="page"' : ""}>${icon(pageDetails[slug || defaultPage][0])}${escapeHtml(label)}</a>`).join("");
-    if (centralInBk) nav.insertAdjacentHTML("beforeend", `<a href="/admin">${icon("home")}Kembali ke Admin Central</a>`);
   }
 
   const home = document.getElementById("monitor-home");

@@ -137,7 +137,7 @@
           </ul>
         </nav>
         <div class="student-account">
-          <a id="student-preview-exit" class="btn btn-primary btn-block" href="/admin" hidden>Kembali ke Admin
+          <a id="student-preview-exit" class="btn btn-primary btn-block preview-exit" href="/admin" hidden>Kembali ke Admin
             Central</a>
           <button id="btn-student-logout" type="button" class="btn btn-outline btn-block">Keluar Akun</button>
         </div>
@@ -506,8 +506,12 @@
       <div id="monitor-menu">
         <nav id="monitor-nav" class="workspace-nav" aria-label="Navigasi ruang kerja"></nav>
         <div class="workspace-account">
-          <p id="admin-name-label"></p>
-          <button id="btn-admin-logout" type="button" class="workspace-logout">Keluar</button>
+          <a id="bk-preview-exit" class="btn btn-primary btn-block preview-exit" href="/admin" hidden>Kembali ke Admin
+            Central</a>
+          <div class="workspace-account-meta">
+            <p id="admin-name-label"></p>
+            <button id="btn-admin-logout" type="button" class="workspace-logout">Keluar</button>
+          </div>
         </div>
       </div>
     </aside>

@@ -574,7 +574,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         const fullName = text(input.fullName ?? previous?.fullName, 120);
         const role = input.role ?? previous?.role;
         requireValue(ROLES.includes(role), "Peran tidak valid.");
-        requireValue(previous || schoolRole(role) || emails.has(email), "Tambahkan email di spreadsheet untuk peran ini.");
+        requireValue(previous || role !== "admin" || emails.has(email), "Tambahkan email di spreadsheet untuk peran ini.");
         requireValue(!registration || role === "bk", "Pendaftaran mandiri hanya untuk Guru BK.");
         const schoolId = schoolRole(role) ? input.schoolId ?? previous?.schoolId : null;
         requireValue(schoolId === null || Sekolah.some((entry) => entry.id === schoolId), "Pilih sekolah yang valid.");

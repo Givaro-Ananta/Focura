@@ -187,23 +187,30 @@ test("Admin Central can delete profiles and allowlist entries while protecting a
     [masterProfile.email, admin.email]);
 });
 
-test("Admin Central can create Guru BK and student accounts and their emails remain revocable", async () => {
+test("Admin Central can create Guru BK, student, and guardian accounts and their emails remain revocable", async () => {
   const { service, admin, student, emails, actor } = fixture();
   const access = await actor(admin);
-  for (const role of ["bk", "student"]) {
+  for (const role of ["bk", "student", "guardian"]) {
     const profile = { email: `${role}-baru@example.test`, email_verified: true, sub: `google-${role}-baru` };
-    const input = { ...profile, fullName: "Akun Baru", role, schoolId: "a" };
+    const input = { ...profile, fullName: "Akun Baru", role, ...(role !== "guardian" ? { schoolId: "a" } : {}) };
     await service.saveAccount(access, input);
     assert(emails.has(profile.email));
     await assert.rejects(service.saveAccount(access, input), { status: 409 });
     const session = await service.startSession(profile);
     const account = (await service.context(session)).actor;
     assert.equal(account.role, role);
+    if (role === "guardian") {
+      const guardianAccess = await service.context(session);
+      assert.equal(account.schoolId, null);
+      assert.deepEqual(await service.children(guardianAccess), []);
+      await service.setGuardianLink(access, { guardianId: account.id, studentId: student.id });
+      assert.deepEqual(await service.children(guardianAccess), [{ fullName: student.fullName, school: "SMA 1 Bandar Lampung", kelas: "X" }]);
+    }
     emails.delete(profile.email);
     await assert.rejects(service.context(session), { status: 401 });
   }
   await assert.rejects(service.saveAccount(access, { email: "salah", role: "student", schoolId: "a", fullName: "Salah" }), { status: 400 });
-  await assert.rejects(service.saveAccount(access, { email: "baru@example.test", role: "guardian", fullName: "Wali" }), { status: 400 });
+  await assert.rejects(service.saveAccount(access, { email: "baru@example.test", role: "admin", fullName: "Admin Baru" }), { status: 400 });
   await assert.rejects(service.saveAccount(access, { email: "master@example.test", role: "bk", schoolId: "a", fullName: "Master" }), { status: 403 });
   const legacySession = await service.startSession(profile(student));
   emails.delete(student.email);
