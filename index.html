@@ -21,34 +21,45 @@
       <div class="auth-form-panel">
         <p id="auth-eyebrow" class="auth-eyebrow">Akses Akun Terdaftar</p>
         <h1 id="login-title">Masuk ke Focura</h1>
-        <p id="auth-help">Gunakan akun Google yang sudah aktif di Focura.</p>
         <div id="auth-alert" role="alert"></div>
         <div id="auth-status" role="status"></div>
         <label id="demo-account-choice" class="form-group hidden">Akun demo
           <select id="demo-account" class="form-control">
             <option value="admin">Admin Central</option>
-            <option value="bk">Guru BK · Bandar Lampung</option>
-            <option value="student">Siswa · Bandar Lampung</option>
-            <option value="student-other">Siswa · Talang Padang</option>
+            <option value="bk">Guru BK (Bandar Lampung)</option>
+            <option value="student">Siswa (Bandar Lampung)</option>
+            <option value="student-other">Siswa (Talang Padang)</option>
           </select>
         </label>
-        <button id="btn-google-login" type="button" class="btn btn-google btn-block" aria-describedby="auth-help" disabled>
+        <button id="btn-google-login" type="button" class="btn btn-google btn-block" disabled>
           <svg class="google-mark" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            <path fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
-          <svg class="ui-icon auth-demo-icon hidden" aria-hidden="true"><use href="/assets/svg/interface.svg#key" /></svg>
+          <svg class="ui-icon auth-demo-icon hidden" aria-hidden="true">
+            <use href="/assets/svg/interface.svg#key" />
+          </svg>
           <span class="btn-spinner" aria-hidden="true"></span>
           <span id="auth-button-label">Masuk dengan Google</span>
         </button>
         <div id="teacher-registration" class="auth-registration hidden">
-          <button id="btn-teacher-register" type="button" class="btn btn-outline btn-block" aria-describedby="teacher-register-help" disabled>
-            <svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#counselor" /></svg>
-            <span class="btn-spinner" aria-hidden="true"></span>
-            <span id="teacher-register-label">Daftar sebagai Guru BK</span>
-          </button>
+          <div class="auth-role-row">
+            <span>Guru BK?</span>
+            <button id="btn-teacher-register" type="button" class="auth-role-trigger"
+              aria-describedby="teacher-register-help" disabled>
+              <svg class="ui-icon" aria-hidden="true">
+                <use href="/assets/svg/interface.svg#counselor" />
+              </svg>
+              <span class="btn-spinner" aria-hidden="true"></span>
+              <span id="teacher-register-label">Daftar sebagai Guru BK</span>
+            </button>
+          </div>
           <p id="teacher-register-help">Daftar dengan Google. Admin Central akan meninjau pendaftaranmu sebelum akses
             dibuka.</p>
         </div>
@@ -56,17 +67,16 @@
           <svg class="ui-icon" aria-hidden="true">
             <use href="/assets/svg/interface.svg#help" />
           </svg>
-          <p id="auth-support-text"><strong>Butuh bantuan masuk?</strong> Hubungi Admin Central jika akunmu belum terdaftar.</p>
+          <p id="auth-support-text"><strong>Butuh bantuan masuk?</strong> Hubungi Admin Central jika akunmu belum
+            terdaftar.</p>
         </div>
       </div>
       <div class="auth-brand-panel">
+        <img class="auth-photo" src="/assets/focus-library.webp" alt="" width="1440" height="960"
+          fetchpriority="high" />
         <div class="auth-intro">
-          <h2>Ruang untuk<br />kembali fokus.</h2>
+          <h2>Ruang untuk kembali fokus.</h2>
           <p>Atur target belajar, latih konsentrasi, dan refleksikan progresmu dengan dukungan Guru BK.</p>
-        </div>
-        <div class="auth-photo-wrap">
-          <img class="auth-photo" src="/assets/focus-library.webp" alt="" width="1440" height="960"
-            fetchpriority="high" />
         </div>
       </div>
     </main>
@@ -95,33 +105,34 @@
       <div id="student-menu">
         <nav aria-label="Navigasi ruang siswa">
           <ul id="student-nav" class="nav-list">
-            <li><button class="nav-item active" aria-current="page" data-section="beranda"><svg class="ui-icon"
-                  aria-hidden="true">
+            <li><button type="button" class="nav-item active" aria-current="page" data-section="beranda"><svg
+                  class="ui-icon" aria-hidden="true">
                   <use href="/assets/svg/interface.svg#home" />
-                </svg>Beranda &amp; Alur</button></li>
-            <li><button class="nav-item" data-section="materi"><svg class="ui-icon" aria-hidden="true">
-                  <use href="/assets/svg/interface.svg#book" />
-                </svg>Materi</button></li>
-            <li><button class="nav-item" data-section="hambatan"><svg class="ui-icon" aria-hidden="true">
-                  <use href="/assets/svg/interface.svg#target" />
+                </svg>Beranda</button></li>
+            <li><button type="button" class="nav-item" data-section="materi"><svg class="ui-icon" aria-hidden="true">
+                  <use href="/assets/svg/interface.svg#book-open" />
+                </svg>Materi & Modul</button></li>
+            <li><button type="button" class="nav-item" data-section="hambatan"><svg class="ui-icon" aria-hidden="true">
+                  <use href="/assets/svg/interface.svg#search-alert" />
                 </svg>Kenali Hambatan</button></li>
-            <li><button class="nav-item" data-section="tugas"><svg class="ui-icon" aria-hidden="true">
-                  <use href="/assets/svg/interface.svg#checklist" />
+            <li><button type="button" class="nav-item" data-section="tugas"><svg class="ui-icon" aria-hidden="true">
+                  <use href="/assets/svg/interface.svg#list-todo" />
                 </svg>Atur Tugas &amp; Target</button></li>
-            <li><button class="nav-item" data-section="fokus"><svg class="ui-icon" aria-hidden="true">
+            <li><button type="button" class="nav-item" data-section="fokus"><svg class="ui-icon" aria-hidden="true">
                   <use href="/assets/svg/interface.svg#timer" />
-                </svg>Mulai Fokus (Timer)</button></li>
-            <li><button class="nav-item" data-section="refleksi"><svg class="ui-icon" aria-hidden="true">
-                  <use href="/assets/svg/interface.svg#document" />
+                </svg>Mulai Fokus</button></li>
+            <li><button type="button" class="nav-item" data-section="refleksi"><svg class="ui-icon" aria-hidden="true">
+                  <use href="/assets/svg/interface.svg#notebook-pen" />
                 </svg>Refleksi Belajar</button></li>
-            <li><button class="nav-item" data-section="progres"><svg class="ui-icon" aria-hidden="true">
-                  <use href="/assets/svg/interface.svg#chart" />
-                </svg>Jejak Progres &amp; Excel</button></li>
-            <li><button class="nav-item" data-section="konsultasi"><svg class="ui-icon" aria-hidden="true">
-                  <use href="/assets/svg/interface.svg#message" />
+            <li><button type="button" class="nav-item" data-section="progres"><svg class="ui-icon" aria-hidden="true">
+                  <use href="/assets/svg/interface.svg#chart-progress" />
+                </svg>Jejak Progres</button></li>
+            <li><button type="button" class="nav-item" data-section="konsultasi"><svg class="ui-icon"
+                  aria-hidden="true">
+                  <use href="/assets/svg/interface.svg#chat-consult" />
                 </svg>Konsultasi Guru BK</button></li>
-            <li><button class="nav-item" data-section="rpl"><svg class="ui-icon" aria-hidden="true">
-                  <use href="/assets/svg/interface.svg#document" />
+            <li><button type="button" class="nav-item" data-section="rpl"><svg class="ui-icon" aria-hidden="true">
+                  <use href="/assets/svg/interface.svg#book-guide" />
                 </svg>Dokumen RPL Klasikal</button></li>
           </ul>
         </nav>
@@ -139,9 +150,24 @@
           <h1 id="student-greeting">Halo, Siswa!</h1>
           <p id="student-meta" class="page-description"></p>
         </div>
-        <div class="student-progress">
-          <label for="rpl-progress-meter" id="rpl-progress-badge">Aktivitas RPL: 0 dari 4</label>
-          <progress id="rpl-progress-meter" max="4" value="0"></progress>
+        <div class="student-progress" id="rpl-progress-gauge" role="progressbar" aria-valuemin="0" aria-valuemax="4"
+          aria-valuenow="0" aria-label="Aktivitas RPL: 0 dari 4" data-level="0">
+          <svg class="rpl-gauge-svg" viewBox="0 0 128 66" width="124" height="64" aria-hidden="true">
+            <path class="rpl-gauge-track" d="M 16.26 52.98 A 48 48 0 0 1 24.44 30.81" />
+            <path class="rpl-gauge-track" d="M 34.78 19.92 A 48 48 0 0 1 56.49 10.59" />
+            <path class="rpl-gauge-track" d="M 71.51 10.59 A 48 48 0 0 1 93.22 19.92" />
+            <path class="rpl-gauge-track" d="M 103.56 30.81 A 48 48 0 0 1 111.74 52.98" />
+            <path class="rpl-gauge-fill" data-gauge-step="1" pathLength="100"
+              d="M 16.26 52.98 A 48 48 0 0 1 24.44 30.81" />
+            <path class="rpl-gauge-fill" data-gauge-step="2" pathLength="100"
+              d="M 34.78 19.92 A 48 48 0 0 1 56.49 10.59" />
+            <path class="rpl-gauge-fill" data-gauge-step="3" pathLength="100"
+              d="M 71.51 10.59 A 48 48 0 0 1 93.22 19.92" />
+            <path class="rpl-gauge-fill" data-gauge-step="4" pathLength="100"
+              d="M 103.56 30.81 A 48 48 0 0 1 111.74 52.98" />
+            <text class="rpl-gauge-count" id="rpl-progress-count" x="64" y="54" text-anchor="middle">0/4</text>
+          </svg>
+          <span class="rpl-gauge-label" id="rpl-progress-badge">Aktivitas</span>
         </div>
       </header>
 
@@ -162,45 +188,102 @@
               <use href="/assets/svg/interface.svg#lock" />
             </svg> Ruang pribadi aktif</p>
         </div>
-        <div class="student-feature-grid dashboard-fill" aria-label="Fitur belajar">
-          <button class="card student-feature" type="button" data-open-section="materi"><span class="icon-tile"><svg
-                class="ui-icon" aria-hidden="true">
-                <use href="/assets/svg/interface.svg#book" />
-              </svg></span><strong>1. Materi dan Modul</strong><span>Baca panduan belajar yang tersedia di
-              sekolahmu.</span><span class="feature-meta" data-feature-meta="materi"></span></button>
-          <button class="card student-feature" type="button" data-open-section="hambatan"><span class="icon-tile"><svg
-                class="ui-icon" aria-hidden="true">
-                <use href="/assets/svg/interface.svg#target" />
-              </svg></span><strong>2. Kenali Hambatan</strong><span>Pilih situasi yang mengganggu fokus dan coba
-              strateginya.</span><span class="feature-meta" data-feature-meta="hambatan"></span></button>
-          <button class="card student-feature" type="button" data-open-section="tugas"><span class="icon-tile"><svg
-                class="ui-icon" aria-hidden="true">
-                <use href="/assets/svg/interface.svg#checklist" />
-              </svg></span><strong>3. Atur Tugas</strong><span>Susun target dan tentukan prioritas
-              harianmu.</span><span class="feature-meta" data-feature-meta="tugas"></span></button>
-          <button class="card student-feature" type="button" data-open-section="fokus"><span class="icon-tile"><svg
-                class="ui-icon" aria-hidden="true">
-                <use href="/assets/svg/interface.svg#timer" />
-              </svg></span><strong>4. Mulai Fokus</strong><span>Latih perhatian dengan timer untuk satu target
-              belajar.</span><span class="feature-meta" data-feature-meta="fokus"></span></button>
-          <button class="card student-feature" type="button" data-open-section="refleksi"><span class="icon-tile"><svg
-                class="ui-icon" aria-hidden="true">
-                <use href="/assets/svg/interface.svg#document" />
-              </svg></span><strong>5. Refleksi Belajar</strong><span>Catat pengalaman dan rencana perbaikan secara
-              pribadi.</span><span class="feature-meta" data-feature-meta="refleksi"></span></button>
-          <button class="card student-feature" type="button" data-open-section="konsultasi"><span class="icon-tile"><svg
-                class="ui-icon" aria-hidden="true">
-                <use href="/assets/svg/interface.svg#message" />
-              </svg></span><strong>6. Konsultasi Guru BK</strong><span>Ajukan pendampingan belajar secara
-              sukarela.</span><span class="feature-meta" data-feature-meta="konsultasi"></span></button>
+        <ul id="rpl-checklist" class="rpl-checklist" aria-label="Empat indikator aktivitas RPL"></ul>
+        <div class="student-journey" aria-label="Alur fitur belajar">
+          <svg class="journey-track journey-track-wide" viewBox="0 0 220 672" width="220" height="672"
+            aria-hidden="true">
+            <path
+              d="M 52 56 C 52 112, 168 112, 168 168 C 168 224, 52 224, 52 280 C 52 336, 168 336, 168 392 C 168 448, 52 448, 52 504 C 52 560, 168 560, 168 616" />
+          </svg>
+          <svg class="journey-track journey-track-compact" viewBox="0 0 64 672" width="64" height="672"
+            aria-hidden="true">
+            <path
+              d="M 22 56 C 22 112, 42 112, 42 168 C 42 224, 22 224, 22 280 C 22 336, 42 336, 42 392 C 42 448, 22 448, 22 504 C 22 560, 42 560, 42 616" />
+          </svg>
+          <ol class="journey-list">
+            <li style="--step-index: 0">
+              <button class="journey-step is-even is-start" type="button" data-open-section="materi">
+                <span class="journey-node" aria-hidden="true"><svg class="ui-icon">
+                    <use href="/assets/svg/interface.svg#flag" />
+                  </svg></span>
+                <span class="journey-copy">
+                  <strong>Materi & Modul</strong>
+                  <span class="journey-desc">Baca panduan belajar yang tersedia di sekolahmu.</span>
+                  <span class="feature-meta" data-feature-meta="materi"></span>
+                </span>
+              </button>
+            </li>
+            <li style="--step-index: 1">
+              <button class="journey-step is-odd" type="button" data-open-section="hambatan"
+                data-journey-rpl="hambatan">
+                <span class="journey-node" aria-hidden="true"><svg class="ui-icon">
+                    <use href="/assets/svg/interface.svg#search-alert" />
+                  </svg></span>
+                <span class="journey-copy">
+                  <strong>Kenali Hambatan</strong>
+                  <span class="journey-desc">Pilih situasi yang mengganggu fokus dan coba strateginya.</span>
+                  <span class="feature-meta" data-feature-meta="hambatan"></span>
+                </span>
+              </button>
+            </li>
+            <li style="--step-index: 2">
+              <button class="journey-step is-even" type="button" data-open-section="tugas" data-journey-rpl="tugas">
+                <span class="journey-node" aria-hidden="true"><svg class="ui-icon">
+                    <use href="/assets/svg/interface.svg#list-todo" />
+                  </svg></span>
+                <span class="journey-copy">
+                  <strong>Atur Tugas</strong>
+                  <span class="journey-desc">Susun target dan tentukan prioritas harianmu.</span>
+                  <span class="feature-meta" data-feature-meta="tugas"></span>
+                </span>
+              </button>
+            </li>
+            <li style="--step-index: 3">
+              <button class="journey-step is-odd" type="button" data-open-section="fokus" data-journey-rpl="fokus">
+                <span class="journey-node" aria-hidden="true"><svg class="ui-icon">
+                    <use href="/assets/svg/interface.svg#timer" />
+                  </svg></span>
+                <span class="journey-copy">
+                  <strong>Mulai Fokus</strong>
+                  <span class="journey-desc">Latih perhatian dengan timer untuk satu target belajar.</span>
+                  <span class="feature-meta" data-feature-meta="fokus"></span>
+                </span>
+              </button>
+            </li>
+            <li style="--step-index: 4">
+              <button class="journey-step is-even" type="button" data-open-section="refleksi"
+                data-journey-rpl="refleksi">
+                <span class="journey-node" aria-hidden="true"><svg class="ui-icon">
+                    <use href="/assets/svg/interface.svg#notebook-pen" />
+                  </svg></span>
+                <span class="journey-copy">
+                  <strong>Refleksi Belajar</strong>
+                  <span class="journey-desc">Catat pengalaman dan rencana perbaikan secara pribadi.</span>
+                  <span class="feature-meta" data-feature-meta="refleksi"></span>
+                </span>
+              </button>
+            </li>
+            <li style="--step-index: 5">
+              <button class="journey-step is-odd is-end" type="button" data-open-section="konsultasi">
+                <span class="journey-node" aria-hidden="true"><svg class="ui-icon">
+                    <use href="/assets/svg/interface.svg#x-mark" />
+                  </svg></span>
+                <span class="journey-copy">
+                  <strong>Konsultasi Guru BK</strong>
+                  <span class="journey-desc">Ajukan pendampingan belajar secara sukarela.</span>
+                  <span class="feature-meta" data-feature-meta="konsultasi"></span>
+                </span>
+              </button>
+            </li>
+          </ol>
         </div>
       </section>
 
       <!-- Panel Materi -->
       <section id="sec-materi" class="student-panel hidden">
-        <h2 class="panel-title">Materi konsentrasi belajar</h2>
-        <p class="panel-description">Pilih Pratinjau Modul untuk membaca materi di Focura.</p>
-        <div id="modules-grid" class="card-grid dashboard-fill"></div>
+        <h2 class="panel-title">Materi belajar</h2>
+        <p class="panel-description">Arahkan kursor ke buku untuk melihat ringkasan, lalu klik untuk membaca modul.</p>
+        <div id="modules-grid" class="book-shelf" aria-label="Rak modul belajar"></div>
       </section>
 
       <!-- Panel Kenali Hambatan -->
@@ -235,7 +318,7 @@
               <button id="task-cancel" type="button" class="btn btn-outline" hidden>Batal</button>
             </div>
           </form>
-          <div class="workspace-filters"><label>Filter tugas
+          <div class="workspace-filters task-toolbar"><label class="inline-filter"><span>Filter tugas</span>
               <select id="task-filter" class="form-control">
                 <option value="all">Semua</option>
                 <option value="open">Belum selesai</option>

@@ -12,7 +12,7 @@ import { setupFocusTimer } from "./focus-timer.js";
 import { syncDropdown } from "./dropdowns.js";
 import { JAKARTA } from "./learning-rules.js";
 import { setupMonitor } from "./monitor.js";
-import { confirmDialog, escapeHtml, openModuleModal, setFeedback, setupMobileMenu, showToast } from "./ui.js";
+import { confirmDialog, emptyState, escapeHtml, openModuleModal, setFeedback, setupMobileMenu, showToast } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 export async function initializeApp() {
@@ -54,7 +54,7 @@ export async function initializeApp() {
       eyebrow.textContent = "Mode Demo Lokal";
       eyebrow.dataset.mode = "demo";
     }
-    authHelp.textContent = "Mode demo menggunakan data contoh.";
+    if (authHelp) authHelp.textContent = "Mode demo menggunakan data contoh.";
     if (supportText) {
       supportText.innerHTML = "<strong>Mode demo aktif.</strong> Semua perubahan hanya tersimpan sementara di memori selama server berjalan.";
     }
@@ -68,10 +68,9 @@ export async function initializeApp() {
     document.getElementById("teacher-registration").classList.remove("hidden");
     if (oauthTesting) {
       if (eyebrow) {
-        eyebrow.textContent = "Tahap Uji Coba Terbatas";
+        eyebrow.textContent = "Tahap Uji Coba";
         eyebrow.dataset.mode = "testing";
       }
-      authHelp.textContent = "Gunakan akun Google yang sudah didaftarkan Admin Central dan masuk daftar uji coba Google.";
       if (registerHelp) {
         registerHelp.textContent = "Tahap uji coba: pastikan email Google-mu sudah diizinkan oleh Admin Central di daftar uji coba sebelum mendaftar.";
       }
@@ -149,9 +148,9 @@ export async function initializeApp() {
       container.innerHTML = children.length ? children.map((child) =>
         `<article class="card guardian-card">
           <span class="icon-tile" aria-hidden="true"><svg><use href="/assets/svg/interface.svg#user" /></svg></span>
-          <h2>${escapeHtml(child.fullName)}</h2><p>${escapeHtml(child.school)} · ${escapeHtml(child.kelas)}</p>
+          <h2>${escapeHtml(child.fullName)}</h2><p><span class="meta-inline"><span>${escapeHtml(child.school)}</span><span>${escapeHtml(child.kelas)}</span></span></p>
         </article>`
-      ).join("") : '<p class="workspace-empty">Belum ada akun anak yang ditautkan. Hubungi Admin Central untuk menautkan akun.</p>';
+      ).join("") : emptyState("Belum ada akun anak yang ditautkan. Hubungi Admin Central untuk menautkan akun.", { icon: "guardian" });
       document.getElementById("btn-guardian-logout").onclick = leave;
       loading?.remove();
       document.getElementById("guardian-app-view").classList.remove("hidden");
@@ -200,6 +199,7 @@ const STUDENT_SECTIONS = new Set(["beranda", "materi", "hambatan", "tugas", "fok
 let focusTimerControl;
 let studentViewListeners;
 let activeEditTaskId = null;
+let previousRplCount = 0;
 
 function sectionFromHash() {
   const id = window.location.hash.replace(/^#/, "").trim();
@@ -211,13 +211,18 @@ function renderStudentDashboard(user, preview) {
   studentViewListeners?.abort();
   studentViewListeners = new AbortController();
   const { signal } = studentViewListeners;
+  previousRplCount = 0;
 
   document.getElementById("student-greeting").textContent = preview ? "Pratinjau Ruang Siswa" : `Halo, ${user.fullName}!`;
-  document.getElementById("student-meta").textContent = preview
-    ? "Aktivitas di halaman ini disimpan sebagai data uji milik Admin Central."
-    : `NIS: ${user.nis || "—"} • ${user.kelas}`;
+  const metaEl = document.getElementById("student-meta");
+  if (preview) {
+    metaEl.textContent = "Aktivitas di halaman ini disimpan sebagai data uji milik Admin Central.";
+  } else {
+    metaEl.innerHTML = `<span class="meta-inline"><span>NIS ${escapeHtml(user.nis || "-")}</span><span>${escapeHtml(user.kelas)}</span></span>`;
+  }
   document.getElementById("student-preview-exit").hidden = !preview;
-  document.getElementById("student-account-info").textContent = `${user.email} · ${user.kelas} · Ruang pribadi aktif`;
+  document.getElementById("student-account-info").innerHTML =
+    `<span class="meta-inline"><span>${escapeHtml(user.email)}</span><span>${escapeHtml(user.kelas)}</span><span>Ruang pribadi aktif</span></span>`;
 
   // Navigasi Menu Siswa
   const menuToggle = document.getElementById("student-menu-toggle");
@@ -285,7 +290,7 @@ function setupStudentImport() {
       tasks = await importStudentWorkbook(file);
       if (!tasks.length) throw new Error("Belum ada baris tugas untuk diimpor.");
       const { importReport } = await updateStudentData("importTasks", { tasks, preview: true });
-      setFeedback(status, `${file.name} · ${importReportText(importReport, true)}`, importReport.imported ? "info" : "error");
+      setFeedback(status, `${file.name}: ${importReportText(importReport, true)}`, importReport.imported ? "info" : "error");
       confirm.hidden = importReport.imported === 0;
     } catch (error) {
       tasks = null;
@@ -343,15 +348,66 @@ function refreshStudentPanels() {
   document.getElementById("stat-reflection-count").textContent = data.reflections.length;
 
   // Indikator Ketercapaian Layanan RPL (Minimal 3 dari 4 aktivitas inti)
-  const criteriaDone = data.rplCount;
-  document.getElementById("rpl-progress-badge").textContent = `Aktivitas RPL: ${criteriaDone} dari 4`;
-  document.getElementById("rpl-progress-meter").value = criteriaDone;
+  const criteriaDone = Math.max(0, Math.min(4, Number(data.rplCount) || 0));
+  const gauge = document.getElementById("rpl-progress-gauge");
+  const countEl = document.getElementById("rpl-progress-count");
+  if (countEl) countEl.textContent = `${criteriaDone}/4`;
+  if (gauge) {
+    const prev = previousRplCount;
+    gauge.setAttribute("aria-valuenow", String(criteriaDone));
+    gauge.setAttribute("aria-label", `Aktivitas RPL: ${criteriaDone} dari 4`);
+    gauge.dataset.level = String(criteriaDone);
+    const applyFill = () => {
+      let newlyFilled = 0;
+      gauge.querySelectorAll("[data-gauge-step]").forEach((arc) => {
+        const step = Number(arc.dataset.gaugeStep);
+        const filled = step <= criteriaDone;
+        if (filled && step > prev) {
+          arc.style.transitionDelay = `${newlyFilled * 130}ms`;
+          newlyFilled++;
+        } else {
+          arc.style.transitionDelay = "0ms";
+        }
+        arc.classList.toggle("is-filled", filled);
+      });
+    };
+    if (prev === 0 && criteriaDone > 0) requestAnimationFrame(applyFill);
+    else applyFill();
+    previousRplCount = criteriaDone;
+  }
+
+  const doneBySection = {
+    hambatan: data.selectedBarriers.length > 0,
+    tugas: data.tasks.length > 0,
+    fokus: data.focusSessions.length > 0,
+    refleksi: data.reflections.length > 0,
+  };
+  document.querySelectorAll("[data-journey-rpl]").forEach((btn) => {
+    btn.classList.toggle("is-done", Boolean(doneBySection[btn.dataset.journeyRpl]));
+  });
+
+  const rplChecklist = document.getElementById("rpl-checklist");
+  if (rplChecklist) {
+    const steps = [
+      { section: "hambatan", label: "Kenali Hambatan", done: doneBySection.hambatan },
+      { section: "tugas", label: "Atur Tugas", done: doneBySection.tugas },
+      { section: "fokus", label: "Latihan Fokus", done: doneBySection.fokus },
+      { section: "refleksi", label: "Refleksi Belajar", done: doneBySection.refleksi },
+    ];
+    rplChecklist.innerHTML = steps.map(({ section, label, done }) => `
+      <li>
+        <button type="button" class="rpl-step${done ? " is-done" : ""}" data-open-section="${section}" aria-label="${escapeHtml(label)} (${done ? "Sudah tercapai" : "Belum tercapai"})">
+          <span class="rpl-step-mark" aria-hidden="true">${done ? "✓" : ""}</span>
+          <span>${escapeHtml(label)}</span>
+        </button>
+      </li>`).join("");
+  }
 
   const featureMeta = {
-    materi: "Panduan belajar sekolah",
+    materi: "Panduan belajar",
     hambatan: data.selectedBarriers.length ? `${data.selectedBarriers.length} hambatan dipilih` : "Belum diisi",
     tugas: data.tasks.length ? (openTasks ? `${openTasks} belum selesai` : "Semua tugas selesai") : "Belum ada target",
-    fokus: data.focusSessions.length ? `${data.focusSessions.length} sesi · ${totalFocusMinutes} menit` : "Belum ada sesi",
+    fokus: data.focusSessions.length ? `${data.focusSessions.length} sesi (${totalFocusMinutes} menit)` : "Belum ada sesi",
     refleksi: data.reflections.length ? `${data.reflections.length} catatan tersimpan` : "Belum ada catatan",
     konsultasi: "Sukarela & rahasia",
   };
@@ -366,8 +422,8 @@ function refreshStudentPanels() {
   const refListEl = document.getElementById("student-reflection-history");
   refListEl.innerHTML = data.reflections.length
     ? data.reflections
-        .map(
-          (r) => `
+      .map(
+        (r) => `
       <article class="card reflection-entry">
         <div class="reflection-date">${escapeHtml(r.date)}</div>
         <dl class="reflection-body">
@@ -376,9 +432,9 @@ function refreshStudentPanels() {
           <div><dt>Rencana Perbaikan</dt><dd>${escapeHtml(r.improvement)}</dd></div>
         </dl>
       </article>`
-        )
-        .join("")
-    : `<p class="workspace-empty">Belum ada catatan refleksi. Isi formulir di atas untuk menulis refleksi pertamamu.</p>`;
+      )
+      .join("")
+    : emptyState("Belum ada catatan refleksi. Isi formulir di atas untuk menulis refleksi pertamamu.", { icon: "notebook-pen" });
 
   const chartEl = document.getElementById("weekly-bar-chart");
   const activeDays = data.activity.filter(({ active }) => active).length;
@@ -414,7 +470,7 @@ function renderTasks(tasks) {
   const openCount = tasks.length - doneCount;
   const summaryEl = document.getElementById("task-summary");
   if (summaryEl) {
-    summaryEl.textContent = tasks.length ? `${openCount} belum selesai · ${doneCount} selesai` : "";
+    summaryEl.textContent = tasks.length ? `${openCount} belum selesai, ${doneCount} selesai` : "";
   }
   const list = document.getElementById("student-task-list");
   list.innerHTML = visible.map((task) => `
@@ -425,7 +481,7 @@ function renderTasks(tasks) {
         <button type="button" class="icon-action-btn" data-task-action="edit" aria-label="Edit ${escapeHtml(task.title)}" title="Edit"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#pencil" /></svg></button>
         <button type="button" class="icon-action-btn is-destructive" data-task-action="delete" aria-label="Hapus ${escapeHtml(task.title)}" title="Hapus"><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#trash" /></svg></button>
       </div>
-    </div>`).join("") || '<p class="workspace-empty">Tidak ada tugas pada filter ini.</p>';
+    </div>`).join("") || emptyState("Tidak ada tugas pada filter ini.", { icon: "list-todo" });
 
   const select = document.getElementById("focus-task");
   const value = select.value;
@@ -574,18 +630,39 @@ async function renderModules() {
   grid.setAttribute("aria-busy", "true");
   try {
     const modules = await loadStudentModules();
-    grid.innerHTML = modules.map((mod) => `<article class="card drive-module">
-        ${mod.category ? `<p class="workspace-meta">${escapeHtml(mod.category)}</p>` : ""}
-        <div class="module-copy"><h3>${escapeHtml(mod.title)}</h3><p>${escapeHtml(mod.description)}</p></div>
-        <div class="workspace-actions">
-          <button type="button" class="btn btn-primary" data-preview="${escapeHtml(mod.id)}">Pratinjau Modul</button>
-          ${mod.previewUrl.startsWith("/")
-            ? `<a class="btn btn-outline" href="${escapeHtml(mod.previewUrl)}" download>Unduh PDF</a>`
-            : `<a class="btn btn-outline" href="${escapeHtml(mod.editUrl)}" target="_blank" rel="noopener noreferrer">Buka Google Drive</a>`}
-        </div>
-      </article>`).join("") || '<p class="workspace-empty">Belum ada materi yang tersedia untuk sekolahmu.</p>';
+    grid.innerHTML = modules.map((mod, index) => {
+      if (!mod?.previewUrl) return "";
+      const category = mod.category || "Modul Belajar";
+      return `<button type="button" class="module-book" data-preview="${escapeHtml(mod.id)}" data-book-tone="${index % 3}">
+        <span class="book-stage">
+          <span class="book-pages" aria-hidden="true">
+            <span class="book-page-inner">
+              <span class="book-page-kicker">${escapeHtml(category)}</span>
+              <span class="book-page-desc">${escapeHtml(mod.description)}</span>
+              <span class="book-page-cta">
+                <span>Baca modul</span>
+                <svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#arrow-right" /></svg>
+              </span>
+            </span>
+          </span>
+          <span class="book-leaf" aria-hidden="true"></span>
+          <span class="book-cover">
+            <span class="book-spine" aria-hidden="true"></span>
+            <span class="book-cover-body">
+              <span class="book-badge">${escapeHtml(category)}</span>
+              <strong class="book-title">${escapeHtml(mod.title)}</strong>
+              <span class="book-mobile-desc">${escapeHtml(mod.description)}</span>
+              <span class="book-cover-foot">
+                <svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#book-open" /></svg>
+                <span>Klik untuk baca</span>
+              </span>
+            </span>
+          </span>
+        </span>
+      </button>`;
+    }).join("") || emptyState("Belum ada materi yang tersedia untuk sekolahmu.", { icon: "book-open" });
     grid.querySelectorAll("[data-preview]").forEach((button) => {
-      button.onclick = () => openModuleModal(modules.find(({ id }) => id === button.dataset.preview));
+      button.onclick = () => openModuleModal(modules.find(({ id }) => id === button.dataset.preview), { readOnly: true });
     });
   } catch (error) {
     grid.textContent = error.message;
