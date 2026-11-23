@@ -115,9 +115,9 @@ export function setupFocusTimer(refreshStudentPanels) {
     if (timerSublabel && timerSublabel.textContent !== sublabel) timerSublabel.textContent = sublabel;
 
     const nextTitle = ready
-      ? `Waktu habis · ${baseTitle}`
+      ? `Waktu habis - ${baseTitle}`
       : timer
-        ? `${time} · ${timer.deadline ? "Fokus" : "Dijeda"} — Focura`
+        ? `${time} (${timer.deadline ? "Fokus" : "Dijeda"}) - Focura`
         : baseTitle;
     if (document.title !== nextTitle) document.title = nextTitle;
 

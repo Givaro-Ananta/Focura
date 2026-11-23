@@ -3,7 +3,7 @@ import { setupBkPage } from "./bk.js";
 import { exportAdminRecapWorkbook } from "./excel-sync.js";
 import { APP_CONFIG } from "./config.js";
 import { JAKARTA } from "./learning-rules.js";
-import { confirmDialog, escapeHtml, setFeedback, setupMobileMenu, showDialog, showToast } from "./ui.js";
+import { confirmDialog, emptyState, escapeHtml, setFeedback, setupMobileMenu, showDialog, showToast } from "./ui.js";
 import { pagePath, WORKSPACES } from "./workspaces.js";
 
 const roles = { admin: "Admin Central", bk: "Guru BK", student: "Siswa", guardian: "Orang Tua/Wali" };
@@ -38,8 +38,8 @@ function options(items, selected) {
   return items.map(([value, label]) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(label)}</option>`).join("");
 }
 
-function table(headers, rows, empty) {
-  if (!rows.length) return `<p class="workspace-empty dashboard-fill">${escapeHtml(empty)}</p>`;
+function table(headers, rows, empty, emptyIcon = "inbox") {
+  if (!rows.length) return emptyState(empty, { icon: emptyIcon, className: "dashboard-fill" });
   const columns = headers.map(escapeHtml);
   return `<div class="workspace-table dashboard-fill" tabindex="0" role="region" aria-label="Tabel ${columns[0].toLowerCase()}">
     <table role="table"><thead role="rowgroup"><tr role="row">
@@ -78,7 +78,7 @@ function overview(stats) {
     ${table(["Sekolah", "Guru BK login / terdaftar", "Siswa login / terdaftar", "Siswa"], stats.map((school) => [
     identity(school.name), `${school.activeTeachers} / ${school.teachers}`, `${school.activeStudents} / ${school.students}`,
     `<a class="icon-action-btn" href="/admin/siswa?sekolah=${encodeURIComponent(school.id)}" aria-label="Lihat siswa ${escapeHtml(school.name)}" title="Lihat siswa">${icon("arrow-right")}</a>`,
-  ]), "Belum ada sekolah. Tambahkan sekolah melalui menu Sekolah & Kelas.")}
+  ]), "Belum ada sekolah. Tambahkan sekolah melalui menu Sekolah & Kelas.", "school")}
   </section>`;
 }
 
@@ -92,7 +92,7 @@ function directoryFilters(data, school, grade, showClass, searchValue = "") {
     })
     .map(({ id, name, schoolId }) => {
       const schoolName = schoolNames.get(schoolId);
-      return [id, !school && schoolName ? `${name} · ${schoolName}` : name];
+      return [id, !school && schoolName ? `${name} (${schoolName})` : name];
     }) : [];
   return `<div class="workspace-filters">
     ${showClass ? `<label>Cari siswa<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(searchValue)}" placeholder="Nama, email, atau NIS"></label>` : ""}
@@ -112,7 +112,7 @@ function schoolDirectory(data) {
       escapeHtml(classes.map(({ name }) => name).join(", ") || "Belum ada kelas"),
       iconAction("edit-school", "pencil", `Edit ${school.name}`, { id: school.id }),
     ];
-  }), "Belum ada sekolah.");
+  }), "Belum ada sekolah.", "school");
 }
 
 function accountStatus(account) {
@@ -172,7 +172,7 @@ function guardianDirectory(data) {
       destructive: true,
       attrs: ` data-guardian="${escapeHtml(guardianId)}" data-student="${escapeHtml(studentId)}"`,
     }),
-  ]), "Belum ada wali yang ditautkan ke siswa.");
+  ]), "Belum ada wali yang ditautkan ke siswa.", "guardian");
 }
 
 function accountForm(data, address) {
@@ -305,8 +305,8 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     context.querySelector("select").onchange = ({ target }) => window.location.assign(schoolPath(target.value));
     if (section !== "rpl" && !selectedSchool) {
       content.innerHTML = schools.length
-        ? '<p class="workspace-empty dashboard-fill">Pilih sekolah untuk membuka data dan fitur Guru BK.</p>'
-        : '<p class="workspace-empty dashboard-fill">Tambahkan sekolah melalui menu <a href="/admin/sekolah">Sekolah &amp; Kelas</a>.</p>';
+        ? emptyState("Pilih sekolah untuk membuka data dan fitur Guru BK.", { icon: "school", className: "dashboard-fill" })
+        : emptyState('Tambahkan sekolah melalui menu <a href="/admin/sekolah">Sekolah &amp; Kelas</a>.', { icon: "school", html: true, className: "dashboard-fill" });
       return;
     }
   }
@@ -363,9 +363,9 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
           identity(student.fullName, student.nis ? `NIS ${student.nis}` : ""),
           identity(student.kelas, student.school),
           sessionStatus(student),
-          `${student.focusCount} sesi · ${student.reflectionCount} refleksi<span class="workspace-meta">${student.rplCount}/4 indikator RPL</span>`,
+          `${student.focusCount} sesi, ${student.reflectionCount} refleksi<span class="workspace-meta">${student.rplCount}/4 indikator RPL</span>`,
           iconAction("edit-class", "pencil", `Ubah kelas ${student.fullName}`, { id: student.id }),
-        ]), "Tidak ada siswa dalam daftar ini.")
+        ]), "Tidak ada siswa dalam daftar ini.", "graduation-cap")
       : table(["Peserta didik", "Kelas", "Aktivitas RPL", "Sesi fokus", "Privasi refleksi", "Status sesi"], students.map((student) => [
         identity(student.fullName, student.email),
         identity(student.kelas, student.nis ? `NIS ${student.nis}` : ""),
@@ -373,7 +373,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
         escapeHtml(student.focusCount),
         identity("Isi privat", `${student.reflectionCount} catatan`),
         sessionStatus(student),
-      ]), "Tidak ada peserta didik yang cocok.");
+      ]), "Tidak ada peserta didik yang cocok.", "graduation-cap");
   }
 
   function renderTeacherRows() {
@@ -381,19 +381,19 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     setCount(teachers.length, data.teachers.length, "Guru BK");
     document.getElementById("directory-results").innerHTML = table(["Guru BK", "Sekolah", "Status sesi"],
       teachers.map((teacher) => [identity(teacher.fullName, teacher.email), escapeHtml(teacher.school), sessionStatus(teacher)]),
-      "Tidak ada guru BK dalam daftar ini.");
+      "Tidak ada guru BK dalam daftar ini.", "counselor");
   }
 
   function renderAccountRows() {
     const { rows, total, empty } = accountRows(data, accountRole, accountState, accountSearch);
     setCount(rows.length, total, "akun");
-    document.getElementById("directory-results").innerHTML = table(["Akun", "Peran", "Status akun", "Edit"], rows, empty);
+    document.getElementById("directory-results").innerHTML = table(["Akun", "Peran", "Status akun", "Edit"], rows, empty, "shield-check");
   }
 
   function render() {
     if (studentsView) {
       content.innerHTML = `${central ? directoryFilters(data, school, grade, true, search) : `
-        <p class="workspace-note">${escapeHtml(data.schools[0]?.name)} · Ketercapaian RPL minimal 3 dari 4 aktivitas.</p>
+        <p class="workspace-note">${escapeHtml(data.schools[0]?.name)}: Ketercapaian RPL minimal 3 dari 4 aktivitas.</p>
         <div class="workspace-filters">
           <label>Cari peserta didik<input type="search" class="form-control" id="filter-student-search" value="${escapeHtml(search)}" placeholder="Nama, email, atau NIS"></label>
           <label>Kelas<select class="form-control" id="filter-class">${options([["", "Semua kelas"], ["unassigned", "Belum Memiliki Kelas"],
@@ -616,6 +616,6 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
     await save(writes[operation], dialog, event.submitter);
   });
 
-  content.innerHTML = '<p class="workspace-empty" role="status">Memuat data…</p>';
+  content.innerHTML = emptyState("Memuat data…", { icon: "spinner", role: "status" });
   await refresh();
 }

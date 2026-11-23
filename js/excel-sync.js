@@ -177,7 +177,7 @@ export function exportAdminRecapWorkbook(students, summary) {
 }
 
 export function importReportText({ imported, duplicates, failed, errors }, preview = false) {
-  const summary = `${imported} ${preview ? "siap disimpan" : "disimpan"} · ${duplicates} duplikat · ${failed} baris tidak valid.`;
+  const summary = `${imported} ${preview ? "siap disimpan" : "disimpan"}, ${duplicates} duplikat, ${failed} baris tidak valid.`;
   const sample = errors.slice(0, 10).map(({ row, message }) => `Baris ${row}: ${message}`).join(" ");
   const remaining = errors.length > 10 ? ` ${errors.length - 10} galat lainnya.` : "";
   return sample ? `${summary} ${sample}${remaining}` : summary;

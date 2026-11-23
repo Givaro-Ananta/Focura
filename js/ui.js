@@ -20,6 +20,13 @@ export function escapeHtml(value) {
   })[character]);
 }
 
+export function emptyState(content, { icon = "inbox", html = false, className = "", role = "" } = {}) {
+  const body = html ? String(content ?? "") : escapeHtml(content);
+  const cls = className ? `workspace-empty ${escapeHtml(className)}` : "workspace-empty";
+  const roleAttr = role ? ` role="${escapeHtml(role)}"` : "";
+  return `<div class="${cls}"${roleAttr}><svg class="ui-icon" aria-hidden="true"><use href="/assets/svg/interface.svg#${escapeHtml(icon)}" /></svg><p>${body}</p></div>`;
+}
+
 export function setFeedback(element, message, tone = "") {
   if (!element) return;
   element.textContent = message || "";
@@ -107,7 +114,7 @@ export function showToast(message, tone = "info") {
   schedule();
 }
 
-export function openModuleModal(module) {
+export function openModuleModal(module, { readOnly = false } = {}) {
   if (!module?.previewUrl) return;
   const modal = document.getElementById("module-preview-modal");
   const iframe = document.getElementById("module-preview-frame");
@@ -115,9 +122,15 @@ export function openModuleModal(module) {
   const external = document.getElementById("module-preview-external");
   const listeners = new AbortController();
   document.getElementById("module-preview-title").textContent = module.title;
-  external.hidden = module.previewUrl.startsWith("/");
-  external.href = module.editUrl;
-  loading.hidden = false;
+  if (external) {
+    const isLocal = module.previewUrl.startsWith("/");
+    external.hidden = isLocal;
+    if (!isLocal) {
+      external.href = readOnly ? module.previewUrl : module.editUrl;
+      external.textContent = readOnly ? "Layar penuh" : "Buka di Drive";
+    }
+  }
+  if (loading) loading.hidden = false;
   iframe.addEventListener("load", () => {
     loading.hidden = true;
   }, { once: true, signal: listeners.signal });

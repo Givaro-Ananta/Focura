@@ -1,7 +1,7 @@
 import { APP_CONFIG } from "./config.js";
 import { exportAdminRecapWorkbook, exportSurveyTemplate, importReportText, importSurveyWorkbook } from "./excel-sync.js";
 import { SURVEY_ITEMS } from "./learning-rules.js";
-import { confirmDialog, escapeHtml as esc, openModuleModal, setFeedback, showDialog, showToast } from "./ui.js";
+import { confirmDialog, emptyState, escapeHtml as esc, openModuleModal, setFeedback, showDialog, showToast } from "./ui.js";
 
 const totalsList = (items) => `<dl class="workspace-stats">${items.map(([label, total]) =>
   `<div><dt>${esc(label)}</dt><dd>${esc(total)}</dd></div>`).join("")}</dl>`;
@@ -23,14 +23,14 @@ function monitoring({ totals, surveyRespondents, survey, barrierRespondents, bar
       const average = counts.reduce((sum, count, index) => sum + count * (index + 1), 0) / surveyRespondents;
       return `<li><div class="survey-item-head"><strong>${esc(label)}</strong><span class="workspace-meta">Rata-rata ${esc(scoreFormat.format(average))} / 5</span></div>
         <div class="survey-track" aria-hidden="true">${counts.map((count, index) => `<span class="survey-score-${index + 1}" style="width:${100 * count / surveyRespondents}%"></span>`).join("")}</div>
-        <span class="workspace-meta">${counts.map((count, index) => `Skor ${index + 1}: ${esc(count)}`).join(" · ")}</span></li>`;
-    }).join("")}</ul>` : `<p class="workspace-empty">Belum ada respons angket. Impor hasilnya melalui <a href="${esc(databasePath)}">Database Excel &amp; Form</a>.</p>`;
+        <span class="workspace-meta">${counts.map((count, index) => `Skor ${index + 1}: ${esc(count)}`).join(", ")}</span></li>`;
+    }).join("")}</ul>` : emptyState(`Belum ada respons angket. Impor hasilnya melalui <a href="${esc(databasePath)}">Database Excel &amp; Form</a>.`, { icon: "chart-progress", html: true });
 
   const barrierChart = barrierRespondents ? `<p class="panel-description">Persentase dihitung dari siswa yang memilih setidaknya satu hambatan. Siswa dapat memilih lebih dari satu.</p>
     <ul class="analytics-chart">${APP_CONFIG.barriersList.map(({ id, label }) =>
       `<li><label><strong>${esc(label)}</strong><progress max="${esc(barrierRespondents)}" value="${esc(barriers[id])}"></progress></label>
-        <span class="workspace-meta">${esc(barriers[id])} siswa · ${Math.round(100 * barriers[id] / barrierRespondents)}%</span></li>`).join("")}</ul>`
-    : '<p class="workspace-empty">Belum ada siswa yang memilih hambatan belajar.</p>';
+        <span class="workspace-meta">${esc(barriers[id])} siswa (${Math.round(100 * barriers[id] / barrierRespondents)}%)</span></li>`).join("")}</ul>`
+    : emptyState("Belum ada siswa yang memilih hambatan belajar.", { icon: "search-alert" });
 
   return `${totalsList([["Peserta didik", totals.students], ["Respons angket awal", surveyRespondents], ["Siswa mengisi pemetaan", barrierRespondents]])}
     <div class="analytics-grid dashboard-fill">
@@ -99,7 +99,7 @@ async function setupMaterials(content, feedback, actions, bkApi) {
           <button type="button" class="icon-action-btn" data-module-action="preview" aria-label="Pratinjau ${esc(module.title)}" title="Pratinjau">${svgIcon("eye")}</button>
           <button type="button" class="icon-action-btn" data-module-action="edit" aria-label="Edit ${esc(module.title)}" title="Edit">${svgIcon("pencil")}</button>
           <button type="button" class="icon-action-btn is-destructive" data-module-action="remove" aria-label="Hapus ${esc(module.title)}" title="Hapus">${svgIcon("trash")}</button>
-        </div></article>`).join("") || '<p class="workspace-empty">Belum ada modul yang tersedia.</p>'}</div>`;
+        </div></article>`).join("") || emptyState("Belum ada modul yang tersedia.", { icon: "book-open" })}</div>`;
   }
   function edit(module) {
     const dialog = showDialog(content, module ? "Ubah modul" : "Tambah modul", `<form class="workspace-form">
@@ -205,7 +205,7 @@ function setupDatabase(content, feedback, actions, bkApi) {
       rows = await importSurveyWorkbook(file);
       if (!rows.length) throw new Error("Belum ada respons di file ini.");
       const report = await bkApi("bk/survey", "POST", { rows, preview: true });
-      setFeedback(status, `${file.name} · ${importReportText(report, true)}`, report.imported ? "info" : "error");
+      setFeedback(status, `${file.name}: ${importReportText(report, true)}`, report.imported ? "info" : "error");
       save.hidden = report.imported === 0;
     } catch (error) {
       rows = null;
