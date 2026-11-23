@@ -456,14 +456,19 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         requireValue(email !== master, "Email Master Admin tidak dapat digunakan untuk pendaftaran Guru BK.", 403);
         const { Akun } = await store.read("Akun");
         const account = Akun.find((entry) => entry.email === email);
+        const rejected = account?.role === "bk" && account.enabled === false && account.registrationRejected === true;
         requireValue(!Akun.some((entry) => entry.googleSub === profile.sub && entry.email !== email) &&
-          (!account?.googleSub || account.googleSub === profile.sub), "Akses akun tidak tersedia.", 403);
-        checkTeacherRegistration(account);
-        if (account) return account.registrationPending === true;
+          (rejected || !account?.googleSub || account.googleSub === profile.sub), "Akses akun tidak tersedia.", 403);
+        if (account && !rejected) {
+          checkTeacherRegistration(account);
+          return account.registrationPending === true;
+        }
         const name = typeof profile.name === "string" ? profile.name.trim() : "";
         const fullName = (name || email).slice(0, 120);
-        await store.write([["Akun", { id: randomUUID(), email, fullName, role: "bk", googleSub: profile.sub,
-          schoolId: null, enabled: false, registrationPending: true }]]);
+        const changes = [["Akun", { id: randomUUID(), email, fullName, role: "bk", googleSub: profile.sub,
+          schoolId: null, enabled: false, registrationPending: true }]];
+        if (rejected) changes.unshift(["Akun", account, "delete"]);
+        await store.write(changes);
         return true;
       });
     },
@@ -473,10 +478,11 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
       return serialize(async () => {
         const { Akun } = await store.read("Akun");
         const account = Akun.find((entry) => entry.id === id);
-        requireValue(account?.role === "bk", "Pendaftaran Guru BK tidak ditemukan.", 404);
-        if (account.registrationRejected) return;
-        requireValue(account.registrationPending, "Pendaftaran ini sudah diputuskan.", 409);
-        await store.write([["Akun", { ...account, enabled: false, registrationPending: false, registrationRejected: true }]]);
+        if (!account) return;
+        requireValue(account.role === "bk", "Pendaftaran Guru BK tidak ditemukan.", 404);
+        requireValue(account.enabled === false && (account.registrationPending || account.registrationRejected),
+          "Pendaftaran ini sudah diputuskan.", 409);
+        await store.write([["Akun", account, "delete"]]);
       });
     },
 

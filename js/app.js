@@ -95,7 +95,7 @@ export async function initializeApp() {
         AccessIncomplete: "Peran atau penugasan akun belum lengkap. Hubungi Admin Central.",
         SessionExpired: "Sesi telah berakhir. Masuk kembali untuk melanjutkan.",
         RegistrationDenied: "Pendaftaran Guru BK tidak dapat diproses. Periksa akun Google atau hubungi Admin Central.",
-        RegistrationRejected: "Pendaftaran Guru BK ditolak. Hubungi Admin Central jika ingin meminta peninjauan ulang.",
+        RegistrationRejected: "Pendaftaran Guru BK sebelumnya ditolak. Pilih Daftar sebagai Guru BK untuk mengajukan kembali.",
         ServiceUnavailable: "Layanan akun sementara tidak tersedia. Silakan coba lagi.",
         OAuthSignin: "Tidak dapat terhubung ke layanan masuk Google. Periksa koneksi internet lalu coba lagi.",
         OAuthCallback: "Proses masuk Google dibatalkan atau gagal diverifikasi. Silakan coba lagi.",

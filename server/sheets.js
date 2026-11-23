@@ -52,8 +52,16 @@ export const sheets = {
     const { data } = connection();
     sheetIds ??= tabs(data).catch((error) => { sheetIds = undefined; throw error; });
     const ids = await sheetIds;
-    const requests = changes.map(([table, { id, row, ...fields }]) => {
+    const requests = changes.map(([table, { id, row, ...fields }, operation]) => {
       const sheetId = ids[table];
+      if (operation === "delete") {
+        if (!Number.isInteger(row) || row < 1) throw new Error("Baris data tidak valid.");
+        return { updateCells: {
+          range: { sheetId, startRowIndex: row, endRowIndex: row + 1, startColumnIndex: 0, endColumnIndex: 2 },
+          rows: [],
+          fields: "userEnteredValue",
+        } };
+      }
       const values = [id, JSON.stringify(fields)].map((stringValue) => ({ userEnteredValue: { stringValue } }));
       return row === undefined
         ? { appendCells: { sheetId, rows: [{ values }], fields: "userEnteredValue" } }

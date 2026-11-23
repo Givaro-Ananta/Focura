@@ -34,9 +34,11 @@ export function createDemoStore() {
       return Object.fromEntries(names.map((name) => [name, structuredClone(tables[name])]));
     },
     async write(changes) {
-      for (const [name, record] of changes) {
+      for (const [name, record, operation] of changes) {
         const index = tables[name].findIndex((entry) => entry.id === record.id);
-        if (index < 0) tables[name].push(structuredClone(record));
+        if (operation === "delete") {
+          if (index >= 0) tables[name].splice(index, 1);
+        } else if (index < 0) tables[name].push(structuredClone(record));
         else tables[name][index] = structuredClone(record);
       }
     },

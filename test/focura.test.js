@@ -33,9 +33,11 @@ function fixture() {
       return Object.fromEntries(names.map((name) => [name, structuredClone(tables[name])]));
     },
     async write(changes) {
-      for (const [name, record] of changes) {
+      for (const [name, record, operation] of changes) {
         const index = tables[name].findIndex((entry) => entry.id === record.id);
-        if (index < 0) tables[name].push(structuredClone(record));
+        if (operation === "delete") {
+          if (index >= 0) tables[name].splice(index, 1);
+        } else if (index < 0) tables[name].push(structuredClone(record));
         else tables[name][index] = structuredClone(record);
       }
     },
@@ -107,7 +109,7 @@ test("Guru BK self-registration requires verified Google identity and Admin Cent
   await assert.rejects(service.startSession(applicant), { status: 403 });
 });
 
-test("Rejected Guru BK registration stays denied until Admin Central explicitly approves it", async () => {
+test("Rejecting a Guru BK registration deletes it and lets the applicant register again", async () => {
   const { service, admin, teacher, emails, actor, tables } = fixture();
   const applicant = { email: "ditolak@example.test", email_verified: true, sub: "google-ditolak" };
   const adminAccess = await actor(admin);
@@ -118,20 +120,38 @@ test("Rejected Guru BK registration stays denied until Admin Central explicitly 
   await assert.rejects(service.rejectTeacherRegistration(adminAccess, teacher.id), { status: 409 });
   await Promise.all([service.rejectTeacherRegistration(adminAccess, id), service.rejectTeacherRegistration(adminAccess, id)]);
   const directory = await service.centralView(await actor(admin), "akun");
-  const rejected = directory.accounts.find((account) => account.id === id);
-  assert.equal(rejected.registrationPending, false);
-  assert.equal(rejected.registrationRejected, true);
-  assert.equal(rejected.enabled, false);
+  assert(!directory.accounts.some((account) => account.id === id));
+  assert(!tables.Akun.some((account) => account.email === applicant.email));
   assert(!emails.has(applicant.email));
-  await assert.rejects(service.registerTeacher(applicant), { code: "RegistrationRejected" });
-  await assert.rejects(service.startSession(applicant), { code: "RegistrationRejected" });
+  await assert.rejects(service.startSession(applicant), { status: 403 });
   assert(!tables.Sesi.some(({ accountId }) => accountId === id));
-  const approval = { schoolId: "a", enabled: true };
-  await assert.rejects(service.saveAccount(adminAccess, approval, id), { status: 409 });
-  await service.saveAccount(adminAccess, { ...approval, approveRejected: true }, id);
+  await assert.rejects(service.saveAccount(adminAccess, { schoolId: "a", enabled: true }, id), { status: 404 });
+  assert.deepEqual(await Promise.all([service.registerTeacher(applicant), service.registerTeacher(applicant)]), [true, true]);
+  const registrations = tables.Akun.filter((account) => account.email === applicant.email);
+  assert.equal(registrations.length, 1);
+  const [registration] = registrations;
+  assert.notEqual(registration.id, id);
+  assert.equal(registration.registrationPending, true);
+  await service.saveAccount(adminAccess, { schoolId: "a", enabled: true }, registration.id);
   assert(emails.has(applicant.email));
-  assert.equal((await service.context(await service.startSession(applicant))).actor.registrationRejected, false);
-  await assert.rejects(service.rejectTeacherRegistration(adminAccess, id), { status: 409 });
+  assert.equal((await service.context(await service.startSession(applicant))).actor.id, registration.id);
+});
+
+test("A previously rejected Guru BK record is replaced by a verified new registration", async () => {
+  const { service, emails, tables } = fixture();
+  const applicant = { email: "lama@example.test", email_verified: true, sub: "google-lama" };
+  tables.Akun.push({ id: "rejected", email: applicant.email, role: "bk", googleSub: applicant.sub, enabled: false,
+    registrationPending: false, registrationRejected: true });
+  await assert.rejects(service.registerTeacher({ ...applicant, email_verified: false }), { status: 403 });
+  assert(tables.Akun.some((account) => account.id === "rejected"));
+  assert.equal(await service.registerTeacher(applicant), true);
+  assert(!tables.Akun.some((account) => account.id === "rejected"));
+  const registrations = tables.Akun.filter((account) => account.email === applicant.email);
+  assert.equal(registrations.length, 1);
+  assert.equal(registrations[0].registrationPending, true);
+  assert(!registrations[0].registrationRejected);
+  assert(!emails.has(applicant.email));
+  await assert.rejects(service.startSession(applicant), { status: 409 });
 });
 
 test("Admin Central can create Guru BK and student accounts and their emails remain revocable", async () => {

@@ -544,7 +544,7 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
       const accountId = form.dataset.id;
       if (await confirmDialog(content, {
         title: "Tolak pendaftaran Guru BK",
-        message: "Pendaftar akan melihat status ditolak saat mencoba masuk dengan Google.",
+        message: "Pengajuan akan dihapus dari daftar akun. Pendaftar dapat mendaftar lagi dengan email yang sama.",
         confirmLabel: "Tolak pendaftaran",
         destructive: true,
       })) {
