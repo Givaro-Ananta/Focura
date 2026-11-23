@@ -21,9 +21,6 @@ export async function initializeApp() {
   const register = document.getElementById("btn-teacher-register");
   const registerLabelEl = document.getElementById("teacher-register-label");
   const registerLabel = registerLabelEl.textContent;
-  const eyebrow = document.getElementById("auth-eyebrow");
-  const authHelp = document.getElementById("auth-help");
-  const supportText = document.getElementById("auth-support-text");
   const registerHelp = document.getElementById("teacher-register-help");
   const { demo: demoFlag, oauthTesting: oauthTestingFlag, workspace, section } = document.getElementById("focura").dataset;
   const demo = demoFlag === "true";
@@ -50,14 +47,6 @@ export async function initializeApp() {
     button.classList.add("btn-primary");
     button.querySelector(".google-mark")?.classList.add("hidden");
     button.querySelector(".auth-demo-icon")?.classList.remove("hidden");
-    if (eyebrow) {
-      eyebrow.textContent = "Mode Demo Lokal";
-      eyebrow.dataset.mode = "demo";
-    }
-    if (authHelp) authHelp.textContent = "Mode demo menggunakan data contoh.";
-    if (supportText) {
-      supportText.innerHTML = "<strong>Mode demo aktif.</strong> Semua perubahan hanya tersimpan sementara di memori selama server berjalan.";
-    }
     document.getElementById("demo-account-choice").classList.remove("hidden");
     if (workspace === "bk") {
       demoAccount.value = "bk";
@@ -67,16 +56,7 @@ export async function initializeApp() {
   } else {
     document.getElementById("teacher-registration").classList.remove("hidden");
     if (oauthTesting) {
-      if (eyebrow) {
-        eyebrow.textContent = "Tahap Uji Coba";
-        eyebrow.dataset.mode = "testing";
-      }
-      if (registerHelp) {
-        registerHelp.textContent = "Tahap uji coba: pastikan email Google-mu sudah diizinkan oleh Admin Central di daftar uji coba sebelum mendaftar.";
-      }
-      if (supportText) {
-        supportText.innerHTML = "<strong>Akses tahap uji coba.</strong> Jika muncul galat izin dari Google, hubungi Admin Central agar emailmu dimasukkan ke daftar uji coba dan daftar akun Focura.";
-      }
+      registerHelp.textContent = "Tahap uji coba: pastikan email Google-mu sudah diizinkan oleh Admin Central di daftar uji coba sebelum mendaftar.";
     }
   }
   async function connect(registering = false) {
@@ -115,6 +95,7 @@ export async function initializeApp() {
         AccessIncomplete: "Peran atau penugasan akun belum lengkap. Hubungi Admin Central.",
         SessionExpired: "Sesi telah berakhir. Masuk kembali untuk melanjutkan.",
         RegistrationDenied: "Pendaftaran Guru BK tidak dapat diproses. Periksa akun Google atau hubungi Admin Central.",
+        RegistrationRejected: "Pendaftaran Guru BK ditolak. Hubungi Admin Central jika ingin meminta peninjauan ulang.",
         ServiceUnavailable: "Layanan akun sementara tidak tersedia. Silakan coba lagi.",
         OAuthSignin: "Tidak dapat terhubung ke layanan masuk Google. Periksa koneksi internet lalu coba lagi.",
         OAuthCallback: "Proses masuk Google dibatalkan atau gagal diverifikasi. Silakan coba lagi.",

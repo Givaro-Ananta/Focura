@@ -10,9 +10,10 @@ const errorKind = Symbol.for("focura.requestError");
 const schoolRole = (role) => role === "bk" || role === "student";
 
 export class AppError extends Error {
-  constructor(status, message) {
+  constructor(status, message, code) {
     super(message);
     this.status = status;
+    this.code = code;
     this[errorKind] = true;
   }
 }
@@ -25,8 +26,8 @@ export function emailAddress(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function requireValue(condition, message, status = 400) {
-  if (!condition) throw new AppError(status, message);
+function requireValue(condition, message, status = 400, code) {
+  if (!condition) throw new AppError(status, message, code);
 }
 
 function text(value, limit, required = true) {
@@ -49,8 +50,12 @@ function googleEmail(profile) {
   return email;
 }
 
-function publicAccount({ id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt, registrationPending }) {
-  return { id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt, registrationPending };
+function publicAccount({ id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt, registrationPending, registrationRejected }) {
+  return { id, fullName, email, role, schoolId, classId, nis, enabled, lastLoginAt, registrationPending, registrationRejected };
+}
+
+function checkTeacherRegistration(account) {
+  requireValue(!account?.registrationRejected, "Pendaftaran Guru BK ditolak oleh Admin Central.", 403, "RegistrationRejected");
 }
 
 function liveSession(session, now) {
@@ -228,6 +233,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     const linked = Akun.find((entry) => entry.googleSub === profile.sub);
     requireValue(!linked || linked.id === account?.id, "Hubungi Master Admin untuk memperbarui email akun.", 403);
     requireValue(!account?.googleSub || account.googleSub === profile.sub, "Akses akun tidak tersedia.", 403);
+    checkTeacherRegistration(account);
     requireValue(!account?.registrationPending, "Pendaftaran Guru BK menunggu persetujuan Admin Central.", 409);
     requireValue(allowed.has(email), "Email belum diizinkan Master Admin.", 403);
     if (!account && email === master) {
@@ -243,7 +249,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     const [emails, { Akun, Sesi }] = await Promise.all([store.emails(), store.read("Akun", "Sesi")]);
     const session = Sesi.find((entry) => entry.id === sessionId);
     const actor = session && Akun.find((account) => account.id === session.accountId);
-    requireValue(actor?.enabled && !actor.registrationPending && (!schoolRole(actor.role) || actor.schoolId) &&
+    requireValue(actor?.enabled && !actor.registrationPending && !actor.registrationRejected && (!schoolRole(actor.role) || actor.schoolId) &&
       emails.has(actor.email) && liveSession(session, now()), "Sesi sudah berakhir atau akses akun dinonaktifkan.", 401);
     return { actor: publicAccount(actor), emails, accounts: Akun, sessions: Sesi };
   }
@@ -293,7 +299,8 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
     const active = new Set(sessions.filter((session) => liveSession(session, now())).map((session) => session.accountId));
     const schools = Sekolah.filter((school) => !scope || school.id === scope);
     if (scope) requireValue(schools.length, "Sekolah tidak ditemukan.", 404);
-    const members = accounts.filter((entry) => !entry.registrationPending && (!scope || entry.schoolId === scope) && (entry.role === "student" || (central && entry.role === "bk")));
+    const members = accounts.filter((entry) => !entry.registrationPending && !entry.registrationRejected &&
+      (!scope || entry.schoolId === scope) && (entry.role === "student" || (central && entry.role === "bk")));
     const names = new Map(Sekolah.map(({ id, name }) => [id, name]));
     const classesList = Kelas.filter((entry) => !scope || entry.schoolId === scope).map(({ id, name, schoolId }) => ({ id, name, schoolId }));
     const classes = new Map(classesList.map(({ id, name }) => [id, name]));
@@ -451,12 +458,25 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         const account = Akun.find((entry) => entry.email === email);
         requireValue(!Akun.some((entry) => entry.googleSub === profile.sub && entry.email !== email) &&
           (!account?.googleSub || account.googleSub === profile.sub), "Akses akun tidak tersedia.", 403);
+        checkTeacherRegistration(account);
         if (account) return account.registrationPending === true;
         const name = typeof profile.name === "string" ? profile.name.trim() : "";
         const fullName = (name || email).slice(0, 120);
         await store.write([["Akun", { id: randomUUID(), email, fullName, role: "bk", googleSub: profile.sub,
           schoolId: null, enabled: false, registrationPending: true }]]);
         return true;
+      });
+    },
+
+    rejectTeacherRegistration(access, id) {
+      allow(access, "admin");
+      return serialize(async () => {
+        const { Akun } = await store.read("Akun");
+        const account = Akun.find((entry) => entry.id === id);
+        requireValue(account?.role === "bk", "Pendaftaran Guru BK tidak ditemukan.", 404);
+        if (account.registrationRejected) return;
+        requireValue(account.registrationPending, "Pendaftaran ini sudah diputuskan.", 409);
+        await store.write([["Akun", { ...account, enabled: false, registrationPending: false, registrationRejected: true }]]);
       });
     },
 
@@ -514,6 +534,9 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         const [{ Akun, Sesi, Sekolah }, emails] = await Promise.all([store.read("Akun", "Sesi", "Sekolah"), store.emails()]);
         const previous = Akun.find((entry) => entry.id === id);
         requireValue(!id || previous, "Akun tidak ditemukan.", 404);
+        requireValue(!previous?.registrationRejected || (input.approveRejected === true && input.enabled === true),
+          "Pendaftaran sudah ditolak. Buka kembali profil untuk meninjaunya.", 409);
+        const registration = previous?.registrationPending || previous?.registrationRejected;
         const email = previous?.email || emailAddress(input.email);
         requireValue(validEmail(email), "Masukkan alamat email Google yang valid.");
         requireValue(previous || email !== master, "Akun Master Admin dibuat melalui login Google.", 403);
@@ -522,7 +545,7 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         const role = input.role ?? previous?.role;
         requireValue(ROLES.includes(role), "Peran tidak valid.");
         requireValue(previous || schoolRole(role) || emails.has(email), "Tambahkan email di spreadsheet untuk peran ini.");
-        requireValue(!previous?.registrationPending || role === "bk", "Pendaftaran mandiri hanya untuk Guru BK.");
+        requireValue(!registration || role === "bk", "Pendaftaran mandiri hanya untuk Guru BK.");
         const schoolId = schoolRole(role) ? input.schoolId ?? previous?.schoolId : null;
         requireValue(schoolId === null || Sekolah.some((entry) => entry.id === schoolId), "Pilih sekolah yang valid.");
         requireValue(!schoolRole(role) || schoolId, "Guru BK dan siswa memerlukan sekolah.");
@@ -533,8 +556,9 @@ export function createFocura(store, { masterEmail = "", now = Date.now } = {}) {
         const classId = role === "student" && previous?.schoolId === schoolId ? previous?.classId || null : null;
         const account = { ...previous, id: id || randomUUID(), email, fullName, role, schoolId, classId, nis, enabled };
         if (previous?.registrationPending && enabled) account.registrationPending = false;
+        if (previous?.registrationRejected && enabled) account.registrationRejected = false;
         // Izin email saja belum memberi akses jika penyimpanan profil gagal.
-        if (!emails.has(email) && (!previous || (previous.registrationPending && enabled))) await store.addEmail(email);
+        if (!emails.has(email) && (!previous || (registration && enabled))) await store.addEmail(email);
         await store.write([["Akun", account], ...(!enabled && id ? revoke(Sesi, id) : [])]);
       });
     },

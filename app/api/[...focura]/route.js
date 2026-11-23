@@ -12,6 +12,7 @@ const routes = [
   ["POST", /^schools\/([^/]+)\/classes$/, "admin", (access, id, body) => focura.createClass(access, id, body)],
   ["POST", /^central\/accounts$/, "admin", (access, _, body) => focura.saveAccount(access, body)],
   ["PATCH", /^central\/accounts\/([^/]+)$/, "admin", (access, id, body) => focura.saveAccount(access, body, id)],
+  ["POST", /^central\/accounts\/([^/]+)\/reject-registration$/, "admin", (access, id) => focura.rejectTeacherRegistration(access, id)],
   ["PATCH", /^central\/students\/([^/]+)\/class$/, "admin", (access, id, body) => focura.setClass(access, id, body)],
   ["POST", /^central\/guardian-links$/, "admin", (access, _, body) => focura.setGuardianLink(access, body)],
   ["GET", /^central\/student-preview\/learning$/, "admin", (access) => focura.learning(access, true)],

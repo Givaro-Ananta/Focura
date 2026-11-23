@@ -9,6 +9,7 @@ import { pagePath, WORKSPACES } from "./workspaces.js";
 const roles = { admin: "Admin Central", bk: "Guru BK", student: "Siswa", guardian: "Orang Tua/Wali" };
 const accountStatuses = {
   pending: "Menunggu persetujuan",
+  rejected: "Pendaftaran ditolak",
   enabled: "Diizinkan",
   disabled: "Dinonaktifkan",
   unlisted: "Email belum diizinkan",
@@ -116,6 +117,7 @@ function schoolDirectory(data) {
 }
 
 function accountStatus(account) {
+  if (account.registrationRejected) return "rejected";
   if (account.registrationPending) return "pending";
   if (!account.enabled) return "disabled";
   return account.emailAllowed ? "enabled" : "unlisted";
@@ -178,17 +180,24 @@ function guardianDirectory(data) {
 function accountForm(data, address) {
   const selected = data.accounts.find(({ email }) => email === address);
   const pending = selected?.registrationPending;
-  const roleChoices = pending ? [["bk", roles.bk]] : address ? Object.entries(roles)
+  const rejected = selected?.registrationRejected;
+  const reviewing = pending || rejected;
+  const roleChoices = reviewing ? [["bk", roles.bk]] : address ? Object.entries(roles)
     : [["", "Pilih peran"], ["bk", roles.bk], ["student", roles.student]];
   return `<form data-operation="account" data-id="${escapeHtml(selected?.id)}" class="workspace-form">
-    ${pending ? '<p>Pilih sekolah untuk memberi Guru BK akses ke ruang kerja sekolah tersebut.</p>' : ""}
+    ${rejected ? "<p>Pendaftaran ini ditolak. Untuk menyetujuinya, pilih sekolah penugasan Guru BK.</p>"
+    : pending ? "<p>Pilih sekolah untuk memberi Guru BK akses ke ruang kerja sekolah tersebut.</p>" : ""}
     <label>Email Google<input class="form-control" type="email" name="email" maxlength="254" required value="${escapeHtml(address)}"${address ? " readonly" : ""}></label>
     <label>Nama<input class="form-control" name="fullName" required maxlength="120" value="${escapeHtml(selected?.fullName)}"></label>
     <label>Peran<select class="form-control" name="role" required>${options(roleChoices, selected?.role || (address ? "student" : ""))}</select></label>
     <label data-account-school>Sekolah<select class="form-control" name="schoolId">${options([["", "Pilih sekolah"], ...schoolOptions(data.schools)], selected?.schoolId)}</select></label>
     <label data-account-nis>NIS<input class="form-control" name="nis" maxlength="60" value="${escapeHtml(selected?.nis)}"></label>
-    ${pending ? '<input type="hidden" name="enabled" value="on">' : `<label class="workspace-check"><input type="checkbox" name="enabled" ${selected?.enabled !== false ? "checked" : ""}> Izinkan login</label>`}
-    <button type="submit" class="btn btn-primary">${pending ? "Setujui pendaftaran" : "Simpan akun"}</button>
+    ${reviewing ? '<input type="hidden" name="enabled" value="on">' : `<label class="workspace-check"><input type="checkbox" name="enabled" ${selected?.enabled !== false ? "checked" : ""}> Izinkan login</label>`}
+    ${rejected ? '<input type="hidden" name="approveRejected" value="on">' : ""}
+    <div class="workspace-actions">
+      <button type="submit" class="btn btn-primary">${reviewing ? "Setujui pendaftaran" : "Simpan akun"}</button>
+      ${pending ? '<button type="button" class="btn btn-outline workspace-destructive" data-action="reject-registration">Tolak pendaftaran</button>' : ""}
+    </div>
   </form>`;
 }
 
@@ -524,10 +533,24 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
         <button type="submit" class="btn btn-primary">Simpan perubahan</button>
       </form>`);
     } else if (action === "add-account" || action === "edit-account") {
-      const pending = data.accounts.some(({ email, registrationPending }) => email === id && registrationPending);
-      const title = pending ? "Tinjau pendaftaran Guru BK" : id ? "Profil akun" : "Tambah akun";
+      const reviewing = data.accounts.some(({ email, registrationPending, registrationRejected }) =>
+        email === id && (registrationPending || registrationRejected));
+      const title = reviewing ? "Tinjau pendaftaran Guru BK" : id ? "Profil akun" : "Tambah akun";
       showDialog(content, title, accountForm(data, id));
       accountFields(content.querySelector('form[data-operation="account"]'));
+    } else if (action === "reject-registration") {
+      if (busy) return;
+      const form = actionButton.form;
+      const accountId = form.dataset.id;
+      if (await confirmDialog(content, {
+        title: "Tolak pendaftaran Guru BK",
+        message: "Pendaftar akan melihat status ditolak saat mencoba masuk dengan Google.",
+        confirmLabel: "Tolak pendaftaran",
+        destructive: true,
+      })) {
+        await save(() => api(`central/accounts/${encodeURIComponent(accountId)}/reject-registration`, "POST", {}),
+          form.closest("dialog"), actionButton);
+      }
     } else if (action === "edit-class") {
       const selected = data.students.find((entry) => entry.id === id);
       const classes = data.classes.filter((entry) => entry.schoolId === selected.schoolId);
@@ -609,7 +632,9 @@ export async function setupMonitor(user, workspace, section, renderRPLSection) {
         ? api(`schools/${form.schoolId}/classes`, "POST", { name: form.className })
         : api("central/schools", "POST", { name: form.schoolName }),
       "school-edit": () => api(`central/schools/${id}`, "PATCH", { name: form.name, newClassName: form.newClassName }),
-      account: () => api(id ? `central/accounts/${id}` : "central/accounts", id ? "PATCH" : "POST", { ...form, enabled: Boolean(form.enabled) }),
+      account: () => api(id ? `central/accounts/${id}` : "central/accounts", id ? "PATCH" : "POST", {
+        ...form, enabled: Boolean(form.enabled), approveRejected: form.approveRejected === "on",
+      }),
       class: () => api(`central/students/${id}/class`, "PATCH", { classId: remove ? null : form.classId }),
       link: () => api("central/guardian-links", "POST", form),
     };

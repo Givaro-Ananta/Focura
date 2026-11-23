@@ -72,6 +72,7 @@ export function createAuthOptions() {
           return true;
         } catch (error) {
           if (isAppError(error)) {
+            if (error.code === "RegistrationRejected") return "/?error=RegistrationRejected";
             if (registerTeacher) return "/?error=RegistrationDenied";
             if (error.status === 409) return "/?pendaftaran=tertunda";
             return error.message.includes("belum lengkap") ? "/?error=AccessIncomplete" : false;

@@ -449,12 +449,16 @@ input[type="checkbox"] {
   padding: 40px clamp(24px, 4vw, 56px);
 }
 
+#focura:not([data-demo="true"]) .auth-demo-only {
+  display: none;
+}
+
 .auth-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
-  color: var(--primary-dark);
+  color: var(--primary);
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -468,14 +472,6 @@ input[type="checkbox"] {
   border-radius: 50%;
   background: currentColor;
   flex: none;
-}
-
-.auth-eyebrow[data-mode="demo"] {
-  color: var(--primary);
-}
-
-.auth-eyebrow[data-mode="testing"] {
-  color: #475569;
 }
 
 .auth-form-panel h1 {
@@ -3436,7 +3432,8 @@ th {
   color: #166534;
 }
 
-.account-badge.is-disabled {
+.account-badge.is-disabled,
+.account-badge.is-rejected {
   background: var(--danger-light);
   color: #991b1b;
 }

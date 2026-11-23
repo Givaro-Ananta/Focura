@@ -107,6 +107,33 @@ test("Guru BK self-registration requires verified Google identity and Admin Cent
   await assert.rejects(service.startSession(applicant), { status: 403 });
 });
 
+test("Rejected Guru BK registration stays denied until Admin Central explicitly approves it", async () => {
+  const { service, admin, teacher, emails, actor, tables } = fixture();
+  const applicant = { email: "ditolak@example.test", email_verified: true, sub: "google-ditolak" };
+  const adminAccess = await actor(admin);
+  const teacherAccess = await actor(teacher);
+  await service.registerTeacher(applicant);
+  const { id } = tables.Akun.find(({ email }) => email === applicant.email);
+  assert.throws(() => service.rejectTeacherRegistration(teacherAccess, id), { status: 403 });
+  await assert.rejects(service.rejectTeacherRegistration(adminAccess, teacher.id), { status: 409 });
+  await Promise.all([service.rejectTeacherRegistration(adminAccess, id), service.rejectTeacherRegistration(adminAccess, id)]);
+  const directory = await service.centralView(await actor(admin), "akun");
+  const rejected = directory.accounts.find((account) => account.id === id);
+  assert.equal(rejected.registrationPending, false);
+  assert.equal(rejected.registrationRejected, true);
+  assert.equal(rejected.enabled, false);
+  assert(!emails.has(applicant.email));
+  await assert.rejects(service.registerTeacher(applicant), { code: "RegistrationRejected" });
+  await assert.rejects(service.startSession(applicant), { code: "RegistrationRejected" });
+  assert(!tables.Sesi.some(({ accountId }) => accountId === id));
+  const approval = { schoolId: "a", enabled: true };
+  await assert.rejects(service.saveAccount(adminAccess, approval, id), { status: 409 });
+  await service.saveAccount(adminAccess, { ...approval, approveRejected: true }, id);
+  assert(emails.has(applicant.email));
+  assert.equal((await service.context(await service.startSession(applicant))).actor.registrationRejected, false);
+  await assert.rejects(service.rejectTeacherRegistration(adminAccess, id), { status: 409 });
+});
+
 test("Admin Central can create Guru BK and student accounts and their emails remain revocable", async () => {
   const { service, admin, student, emails, actor } = fixture();
   const access = await actor(admin);
