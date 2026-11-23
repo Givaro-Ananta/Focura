@@ -5,12 +5,15 @@ import { demoEnabled } from "../server/demo.js";
 import Initialize from "./initialize.js";
 
 export default async function FocuraShell({ workspace, section }) {
+  const oauthTesting = !demoEnabled && !["0", "false", "production"].includes(
+    String(process.env.FOCURA_OAUTH_TESTING ?? "1").trim().toLowerCase(),
+  );
   const studentPreview = workspace === "admin" && section === "pratinjau-siswa";
   const template = await readFile(join(process.cwd(), "index.html"), "utf8");
   const [login, student, monitor, guardian, shared] = template.split("<body>")[1].split("</body>")[0]
     .split(/<!-- workspace:(?:student|monitor|guardian|shared) -->/);
   return <>
-    <div id="focura" data-demo={demoEnabled || undefined} data-workspace={workspace} data-section={section}
+    <div id="focura" data-demo={demoEnabled || undefined} data-oauth-testing={oauthTesting || undefined} data-workspace={workspace} data-section={section}
       dangerouslySetInnerHTML={{ __html: login + (studentPreview ? student : workspace ? monitor : student + guardian) + shared }} />
     <div id="workspace-loading" className="workspace-loading" role="status" aria-live="polite">
       <div className="workspace-loading-card">

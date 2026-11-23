@@ -39,8 +39,9 @@ Pasang dependensi dengan `npm ci`. Salin `.env.example` ke `.env.local`, lalu is
 | `GOOGLE_ALLOWLIST_SPREADSHEET_ID` | ID Google Sheets privat untuk daftar izin. Buat tab `Email` dengan header `email` di sel A1. Berikan akses Editor kepada service account agar Focura dapat menambahkan email dari menu Akun. |
 | `GOOGLE_DATA_SPREADSHEET_ID` | ID spreadsheet operasional yang berbeda. Bagikan dengan akses Editor ke service account. |
 | `FOCURA_MASTER_EMAIL` | Email Google Master Admin pertama. Masukkan juga email ini ke tab `Email`. |
+| `FOCURA_OAUTH_TESTING` | Opsional. Bawaan `1` untuk menampilkan panduan tahap uji coba Google OAuth di halaman masuk; ubah ke `0` setelah aplikasi OAuth dipublish ke Production di Google Cloud Console. |
 
-Jalankan `npm run setup:sheets` sekali untuk menyiapkan tab operasional. Setelah itu, jalankan `npm run dev`, buka [http://localhost:3000](http://localhost:3000), lalu pilih **Masuk dengan Google** menggunakan email Master Admin. Tambahkan sekolah dan kelas dari menu **Sekolah & Kelas**. Jika aplikasi OAuth masih berstatus **Testing**, tambahkan akun pengujian di pengaturan Google OAuth.
+Jalankan `npm run setup:sheets` sekali untuk menyiapkan tab operasional. Setelah itu, jalankan `npm run dev`, buka [http://localhost:3000](http://localhost:3000), lalu pilih **Masuk dengan Google** menggunakan email Master Admin. Tambahkan sekolah dan kelas dari menu **Sekolah & Kelas**. Jika aplikasi OAuth masih berstatus **Testing**, tambahkan akun pengujian di pengaturan Google OAuth. Saat menyiapkan publish di Google Cloud Console, halaman `/privasi` dapat dipakai sebagai tautan Kebijakan Privasi.
 
 ### Pendaftaran dan pengelolaan akun
 
