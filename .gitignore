@@ -3,3 +3,5 @@ node_modules/
 .next-demo/
 .env*
 !.env.example
+client_secret_*.json
+focura-*.json
